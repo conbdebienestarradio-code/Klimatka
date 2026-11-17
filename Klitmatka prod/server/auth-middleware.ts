@@ -1,41 +1,42 @@
 import type { NextFunction, Request, Response } from "express";
 import type { AuthIdentity } from "../shared/auth";
-import { getSessionIdentity } from "./environment-engine";
-
-const sessionCookieName = "klimatka_session";
+import type { SupabaseClient, User } from "@supabase/supabase-js";
+import { createSupabaseClient, getAuthIdentity } from "./supabase";
 
 declare global {
   namespace Express {
     interface Request {
       auth?: AuthIdentity;
+      supabaseClient?: SupabaseClient;
+      supabaseUser?: User;
     }
   }
 }
 
-export function setSessionCookie(res: Response, token: string) {
-  const secure = process.env.NODE_ENV === "production" ? "; Secure" : "";
-  res.append("Set-Cookie", `${sessionCookieName}=${token}; Path=/; HttpOnly; SameSite=Lax; Max-Age=1209600${secure}`);
-}
-
-export function clearSessionCookie(res: Response) {
-  const secure = process.env.NODE_ENV === "production" ? "; Secure" : "";
-  res.append("Set-Cookie", `${sessionCookieName}=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0${secure}`);
-}
-
-export function readSessionToken(req: Request) {
-  const cookie = req.headers.cookie?.split(";").map((part) => part.trim()).find((part) => part.startsWith(`${sessionCookieName}=`));
-  return cookie?.slice(sessionCookieName.length + 1) ?? null;
-}
-
-export function requireAuthenticated(req: Request, res: Response, next: NextFunction) {
-  const token = readSessionToken(req);
-  const identity = token ? getSessionIdentity(token) : null;
-  if (!identity) {
+export async function requireAuthenticated(req: Request, res: Response, next: NextFunction) {
+  const authorization = req.get("authorization") ?? "";
+  const token = /^Bearer\s+(.+)$/i.exec(authorization)?.[1];
+  if (!token) {
     res.status(401).json({ message: "Inicia sesión para continuar." });
     return;
   }
-  req.auth = identity;
-  next();
+
+  try {
+    const verifier = createSupabaseClient();
+    const { data: { user }, error } = await verifier.auth.getUser(token);
+    if (error || !user) {
+      res.status(401).json({ message: "La sesión expiró. Inicia sesión de nuevo." });
+      return;
+    }
+    const client = createSupabaseClient(token);
+    const requestedCompanyId = req.get("x-klimatka-company-id");
+    req.supabaseClient = client;
+    req.supabaseUser = user;
+    req.auth = await getAuthIdentity(client, user, requestedCompanyId);
+    next();
+  } catch {
+    res.status(503).json({ message: "El acceso seguro aún no está disponible." });
+  }
 }
 
 export function requireCompany(req: Request, res: Response, next: NextFunction) {

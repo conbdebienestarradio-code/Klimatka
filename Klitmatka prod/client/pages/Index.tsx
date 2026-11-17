@@ -40,6 +40,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import klimatkaLogo from "../lib/klimatka-logo.png";
 import klimatkaLogoAnimationBase from "../lib/klimatka-logo-animation-base.png";
+import CompanyAccessModal from "../components/CompanyAccessModal";
+import { appFetch, appLogout, resetDemoWorkspace } from "../lib/demo-api";
 import type { AuthIdentity, MeasurementModule } from "@shared/auth";
 import {
   activityCategories,
@@ -51,7 +53,7 @@ import {
   type QualityDimension,
 } from "@shared/environment";
 
-const USER_MANUAL_DOWNLOAD_URL = "/manual-usuario.md";
+const USER_MANUAL_DOWNLOAD_URL = "/manual-usuario.pdf";
 const WELCOME_ANIMATION_DOWNLOAD_URL = "/klimatka-intro.mp4";
 
 type Library = {
@@ -180,7 +182,7 @@ type ActivityOptions = {
   refrigerants: { code: string; name: string }[];
 };
 
-type View = "Resumen" | "Registros" | "Calidad" | "Plan de acción";
+type View = "Resumen" | "Registros" | "Calidad" | "Mi actividad" | "Plan de acción";
 
 type CalculationError = {
   message?: string;
@@ -349,6 +351,7 @@ function useEnvironmentalData(
   periodMode: "ANUAL" | "MENSUAL",
   month: string,
   comparisonYear: string,
+  demoMode = false,
 ) {
   const [overview, setOverview] = useState<EnvironmentalOverview | null>(null);
   const [library, setLibrary] = useState<Library | null>(null);
@@ -361,9 +364,9 @@ function useEnvironmentalData(
   const refresh = useCallback(async () => {
     const [overviewResponse, libraryResponse, runsResponse] = await Promise.all(
       [
-        fetch("/api/environment/overview"),
-        fetch(role === "admin" ? "/api/environment/library" : "/api/environment/options"),
-        fetch("/api/environment/runs"),
+        appFetch("/api/environment/overview"),
+        appFetch(role === "admin" ? "/api/environment/library" : "/api/environment/options"),
+        appFetch("/api/environment/runs"),
       ],
     );
     if (!overviewResponse.ok || !libraryResponse.ok || !runsResponse.ok)
@@ -377,7 +380,7 @@ function useEnvironmentalData(
     setLibrary(role === "admin" ? libraryData : null);
     setActivityOptions(libraryData);
     setRuns(runsData);
-  }, [role, companyId]);
+  }, [role, companyId, demoMode]);
   const refreshPeriodRuns = useCallback(
     async (
       selectedYear = year,
@@ -387,8 +390,8 @@ function useEnvironmentalData(
       const periodQuery = new URLSearchParams({ year: selectedYear });
       if (selectedMode === "MENSUAL") periodQuery.set("month", selectedMonth);
       const [response, headcountsResponse] = await Promise.all([
-        fetch(`/api/environment/runs?${periodQuery.toString()}`),
-        fetch(`/api/environment/headcounts?${periodQuery.toString()}`),
+        appFetch(`/api/environment/runs?${periodQuery.toString()}`),
+        appFetch(`/api/environment/headcounts?${periodQuery.toString()}`),
       ]);
       if (!response.ok || !headcountsResponse.ok)
         throw new Error("No fue posible cargar los registros del período.");
@@ -399,7 +402,7 @@ function useEnvironmentalData(
       setPeriodRuns(runsData);
       setPeriodHeadcounts(headcountsData);
     },
-    [companyId, year, periodMode, month],
+    [companyId, year, periodMode, month, demoMode],
   );
   const refreshComparisonRuns = useCallback(
     async (
@@ -409,7 +412,7 @@ function useEnvironmentalData(
     ) => {
       const periodQuery = new URLSearchParams({ year: selectedYear });
       if (selectedMode === "MENSUAL") periodQuery.set("month", selectedMonth);
-      const response = await fetch(
+      const response = await appFetch(
         `/api/environment/runs?${periodQuery.toString()}`,
       );
       if (!response.ok)
@@ -418,7 +421,7 @@ function useEnvironmentalData(
         );
       setComparisonRuns(await response.json());
     },
-    [companyId, comparisonYear, periodMode, month],
+    [companyId, comparisonYear, periodMode, month, demoMode],
   );
   useEffect(() => {
     refresh()
@@ -445,15 +448,16 @@ function useEnvironmentalData(
   };
 }
 
-export default function Index({ identity, onManageCompanies }: { identity: AuthIdentity & { company: NonNullable<AuthIdentity["company"]> }; onManageCompanies: () => void }) {
-  const [introComplete, setIntroComplete] = useState(false);
+export default function Index({ identity, onManageCompanies, demoMode = false }: { identity: AuthIdentity & { company: NonNullable<AuthIdentity["company"]> }; onManageCompanies: () => void; demoMode?: boolean }) {
+  const [introComplete, setIntroComplete] = useState(demoMode);
 
   useEffect(() => {
+    if (demoMode) return;
     const timeout = window.setTimeout(() => setIntroComplete(true), 5_000);
     return () => window.clearTimeout(timeout);
-  }, []);
+  }, [demoMode]);
 
-  return introComplete ? <EnvironmentalWorkspace identity={identity} onManageCompanies={onManageCompanies} /> : <LaunchScreen />;
+  return introComplete ? <EnvironmentalWorkspace identity={identity} onManageCompanies={onManageCompanies} demoMode={demoMode} /> : <LaunchScreen />;
 }
 
 function LaunchScreen() {
@@ -567,7 +571,7 @@ function LaunchScreen() {
   );
 }
 
-function EnvironmentalWorkspace({ identity, onManageCompanies }: { identity: AuthIdentity & { company: NonNullable<AuthIdentity["company"]> }; onManageCompanies: () => void }) {
+function EnvironmentalWorkspace({ identity, onManageCompanies, demoMode = false }: { identity: AuthIdentity & { company: NonNullable<AuthIdentity["company"]> }; onManageCompanies: () => void; demoMode?: boolean }) {
   const [periodMode, setPeriodMode] = useState<"ANUAL" | "MENSUAL">("ANUAL");
   const [selectedYear, setSelectedYear] = useState(monthNow.slice(0, 4));
   const [selectedMonth, setSelectedMonth] = useState(monthNow.slice(5, 7));
@@ -593,6 +597,7 @@ function EnvironmentalWorkspace({ identity, onManageCompanies }: { identity: Aut
     periodMode,
     selectedMonth,
     comparisonYear,
+    demoMode,
   );
   const [view, setView] = useState<View>("Resumen");
   const [captureOpen, setCaptureOpen] = useState(false);
@@ -608,10 +613,6 @@ function EnvironmentalWorkspace({ identity, onManageCompanies }: { identity: Aut
     null,
   );
   const [inviteOpen, setInviteOpen] = useState(false);
-  const [inviteEmail, setInviteEmail] = useState("");
-  const [inviteUrl, setInviteUrl] = useState("");
-  const [inviteError, setInviteError] = useState("");
-  const [inviteSaving, setInviteSaving] = useState(false);
   const userInitials = `${identity.firstName[0] ?? ""}${identity.lastName[0] ?? ""}`.toUpperCase();
   const companyInitials = identity.company!.name.split(/\s+/).slice(0, 2).map((part) => part[0] ?? "").join("").toUpperCase();
 
@@ -652,7 +653,7 @@ function EnvironmentalWorkspace({ identity, onManageCompanies }: { identity: Aut
     setError("");
     setNotice("");
     try {
-      const response = await fetch(
+      const response = await appFetch(
         editingRun
           ? `/api/environment/runs/${encodeURIComponent(editingRun.calculationId)}`
           : "/api/environment/calculate",
@@ -723,7 +724,7 @@ function EnvironmentalWorkspace({ identity, onManageCompanies }: { identity: Aut
       return;
     setSaving(true);
     try {
-      const response = await fetch(
+      const response = await appFetch(
         `/api/environment/runs/${encodeURIComponent(run.calculationId)}`,
         { method: "DELETE" },
       );
@@ -767,27 +768,8 @@ function EnvironmentalWorkspace({ identity, onManageCompanies }: { identity: Aut
     setNotice("Reporte ejecutivo descargado en formato PDF.");
   };
 
-  const createInvitation = async () => {
-    setInviteError("");
-    setInviteSaving(true);
-    try {
-      const response = await fetch("/api/auth/invitations", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: inviteEmail }),
-      });
-      const result = await response.json();
-      if (!response.ok) throw new Error(result.message ?? "No se pudo crear la invitación.");
-      setInviteUrl(new URL(result.url, window.location.origin).toString());
-    } catch (cause) {
-      setInviteError(cause instanceof Error ? cause.message : "No se pudo crear la invitación.");
-    } finally {
-      setInviteSaving(false);
-    }
-  };
-
   const downloadPowerBiData = async () => {
-    const response = await fetch("/api/environment/runs/export");
+    const response = await appFetch("/api/environment/runs/export");
     if (!response.ok) {
       setNotice("No fue posible preparar la exportación de datos.");
       return;
@@ -813,7 +795,9 @@ function EnvironmentalWorkspace({ identity, onManageCompanies }: { identity: Aut
   const navItems: { label: View; icon: typeof BarChart3 }[] = [
     { label: "Resumen", icon: BarChart3 },
     { label: "Registros", icon: ClipboardCheck },
-    ...(identity.role === "admin" ? [{ label: "Calidad" as const, icon: ShieldCheck }] : []),
+    ...(identity.role === "admin"
+      ? [{ label: "Calidad" as const, icon: ShieldCheck }]
+      : [{ label: "Mi actividad" as const, icon: Activity }]),
     { label: "Plan de acción", icon: Lightbulb },
   ];
 
@@ -851,8 +835,8 @@ function EnvironmentalWorkspace({ identity, onManageCompanies }: { identity: Aut
             </span>
             <b>Diagnóstico confiable</b>
             <p>Datos trazables. Decisiones con impacto.</p>
-            <button onClick={() => setView("Calidad")}>
-              Conoce el método <ArrowRight size={13} />
+            <button onClick={() => setView(identity.role === "admin" ? "Calidad" : "Mi actividad")}>
+              {identity.role === "admin" ? "Conoce el método" : "Ver mi actividad"} <ArrowRight size={13} />
             </button>
           </div>
           <div className="user-row">
@@ -862,7 +846,7 @@ function EnvironmentalWorkspace({ identity, onManageCompanies }: { identity: Aut
               <small>{identity.role === "admin" ? "Administración" : identity.jobTitle}</small>
             </span>
             {identity.role === "admin" && <button className="icon-button sidebar-user-action" aria-label="Invitar a un usuario" onClick={() => setInviteOpen(true)}><UserPlus size={16} /></button>}
-            <button className="icon-button sidebar-user-action" aria-label="Cerrar sesión" onClick={() => { fetch("/api/auth/logout", { method: "POST" }).finally(() => window.location.assign("/login")); }}>
+            <button className="icon-button sidebar-user-action" aria-label="Cerrar sesión" onClick={() => { void appLogout().finally(() => window.location.assign(demoMode ? "/login?demo=1" : "/login")); }}>
               <LogOut size={16} />
             </button>
           </div>
@@ -897,14 +881,15 @@ function EnvironmentalWorkspace({ identity, onManageCompanies }: { identity: Aut
               <Bell size={18} />
               <i />
             </button>
-            <button className="topbar-user" onClick={() => setView("Calidad")}>
-              <span className="user-avatar">CB</span>
+            <button className="topbar-user" onClick={() => setView(identity.role === "admin" ? "Calidad" : "Mi actividad")}>
+              <span className="user-avatar">{userInitials}</span>
               <ChevronDown size={14} />
             </button>
           </div>
         </header>
 
         <div className="content-wrap">
+          {demoMode && <div className="demo-mode-banner" role="status"><b>Modo demostración</b><span>Datos ficticios guardados solo en este navegador.</span><button type="button" onClick={resetDemoWorkspace}>Reiniciar demo</button></div>}
           {notice && (
             <div className="notice-bar">
               <Check size={15} />
@@ -956,20 +941,23 @@ function EnvironmentalWorkspace({ identity, onManageCompanies }: { identity: Aut
                   onExportPowerBi={downloadPowerBiData}
                 />
               )}
-              {view === "Registros" && (
+              {(view === "Registros" || view === "Mi actividad") && (
                 <RecordsView
-                  runs={filteredRuns}
+                  title={view === "Mi actividad" ? "Mis registros" : "Registros de cálculo"}
+                  runs={view === "Mi actividad" ? filteredRuns.filter((run) => run.createdByUserId === identity.id) : filteredRuns}
                   query={query}
                   setQuery={setQuery}
                   onCreate={() => openCapture()}
                   onEdit={openEdit}
                   onDelete={deleteActivity}
+                  canEdit={(run) => identity.role === "admin" || run.createdByUserId === identity.id}
+                  canDelete={(run) => identity.role === "admin" && run.createdByRole !== "member"}
                   deleting={saving}
                 />
               )}
               {view === "Calidad" && <QualityView runs={runs} />}
               {view === "Plan de acción" && (
-                <ActionView runs={runs} onCreate={() => setCaptureOpen(true)} />
+                <ActionView runs={runs} onCreate={openCapture} />
               )}
             </>
           )}
@@ -989,21 +977,12 @@ function EnvironmentalWorkspace({ identity, onManageCompanies }: { identity: Aut
           aria-label="Cerrar navegación"
         />
       )}
-      {inviteOpen && (
-        <div className="modal-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) setInviteOpen(false); }}>
-          <section className="auth-invite-modal" role="dialog" aria-modal="true" aria-labelledby="invite-title">
-            <h2 id="invite-title">Invitar a la empresa</h2>
-            <p>El enlace permite crear o asociar un perfil de miembro a <b>{identity.company!.name}</b>. Solo se puede usar con el correo invitado y vence en 7 días.</p>
-            {!inviteUrl && <><label className="auth-field"><span>Correo electrónico del usuario</span><input type="email" autoComplete="email" value={inviteEmail} onChange={(event) => setInviteEmail(event.target.value)} required maxLength={254} placeholder="persona@empresa.com" /></label><div className="auth-invite-link"><button className="button-primary" type="button" disabled={inviteSaving || !inviteEmail} onClick={createInvitation}>{inviteSaving ? "Creando…" : "Crear invitación"}</button><button className="button-secondary" type="button" onClick={() => setInviteOpen(false)}>Cancelar</button></div></>}
-            {inviteUrl && <><label className="auth-field"><span>Enlace de invitación</span><div className="auth-invite-link"><input readOnly value={inviteUrl} /><button type="button" onClick={() => { navigator.clipboard.writeText(inviteUrl).then(() => setNotice("Enlace de invitación copiado.")); }}>Copiar enlace</button></div></label><div className="auth-invite-link"><button className="button-secondary" type="button" onClick={() => { setInviteOpen(false); setInviteUrl(""); setInviteEmail(""); }}>Listo</button></div></>}
-            {inviteError && <div className="auth-error" role="alert">{inviteError}</div>}
-          </section>
-        </div>
-      )}
+      {inviteOpen && <CompanyAccessModal companyName={identity.company!.name} currentUserId={identity.id} demoMode={demoMode} onClose={() => setInviteOpen(false)} />}
       {captureOpen && (
         <CaptureModal
           key={editingRun?.calculationId ?? "new"}
           tenantId={identity.company!.id}
+          allowHeadcount={identity.role === "admin"}
           library={activityOptions}
           initialCategory={captureCategory}
           initialRun={editingRun}
@@ -1370,10 +1349,7 @@ function Dashboard({
           <div className="eyebrow">
             <span className="eyebrow-line" /> INTELIGENCIA QUE ACTIVA EL CAMBIO
           </div>
-          <h1>
-            El pulso ambiental
-            <br className="desktop-break" /> de tu operación.
-          </h1>
+          <h1>El pulso ambiental de tu operación.</h1>
           <p>
             Una línea base clara para transformar cada dato en una mejor
             decisión.
@@ -2100,20 +2076,26 @@ function EmissionsChart({
 }
 
 function RecordsView({
+  title,
   runs,
   query,
   setQuery,
   onCreate,
   onEdit,
   onDelete,
+  canEdit,
+  canDelete,
   deleting,
 }: {
+  title: string;
   runs: CalculationResult[];
   query: string;
   setQuery: (value: string) => void;
   onCreate: () => void;
   onEdit: (run: CalculationResult) => void;
   onDelete: (run: CalculationResult) => void;
+  canEdit: (run: CalculationResult) => boolean;
+  canDelete: (run: CalculationResult) => boolean;
   deleting: boolean;
 }) {
   return (
@@ -2123,10 +2105,9 @@ function RecordsView({
           <div className="eyebrow">
             <span className="eyebrow-line" /> TRAZABILIDAD DE ACTIVIDAD
           </div>
-          <h1>Registros de cálculo</h1>
+          <h1>{title}</h1>
           <p>
-            Corrige una actividad para volver a calcularla, o elimínala de los
-            totales. Las versiones anteriores quedan en el historial.
+            Registra consumos de la empresa y consulta los resultados consolidados. Las correcciones conservan las versiones anteriores.
           </p>
         </div>
         <button className="button-primary" onClick={onCreate}>
@@ -2155,6 +2136,8 @@ function RecordsView({
                 key={run.calculationId}
                 onEdit={() => onEdit(run)}
                 onDelete={() => onDelete(run)}
+                canEdit={canEdit(run)}
+                canDelete={canDelete(run)}
                 deleting={deleting}
               />
             ))}
@@ -2180,11 +2163,15 @@ function RunRow({
   run,
   onEdit,
   onDelete,
+  canEdit,
+  canDelete,
   deleting,
 }: {
   run: CalculationResult;
   onEdit: () => void;
   onDelete: () => void;
+  canEdit: boolean;
+  canDelete: boolean;
   deleting: boolean;
 }) {
   const source = run.snapshot.activity as EnvironmentalInput | undefined;
@@ -2246,30 +2233,12 @@ function RunRow({
               ? "Calculado"
               : run.thresholdStatus}
       </StatusTag>
-      <div className="run-actions">
-        <button
-          type="button"
-          className="run-action-button"
-          onClick={onEdit}
-          disabled={deleting}
-          aria-label={`Modificar ${categoryLabels[run.category]} de ${formatPeriod(run.reportingPeriod)}`}
-          title="Modificar registro"
-        >
-          <Pencil size={14} />
-          <span>Modificar</span>
-        </button>
-        <button
-          type="button"
-          className="run-action-button run-delete-button"
-          onClick={onDelete}
-          disabled={deleting}
-          aria-label={`Eliminar ${categoryLabels[run.category]} de ${formatPeriod(run.reportingPeriod)}`}
-          title="Eliminar registro"
-        >
-          <Trash2 size={14} />
-          <span>Eliminar</span>
-        </button>
-      </div>
+      {(canEdit || canDelete) ? (
+        <div className="run-actions">
+          {canEdit && <button type="button" className="run-action-button" onClick={onEdit} disabled={deleting} aria-label={`Modificar ${categoryLabels[run.category]} de ${formatPeriod(run.reportingPeriod)}`} title="Modificar registro"><Pencil size={14} /><span>Modificar</span></button>}
+          {canDelete && <button type="button" className="run-action-button run-delete-button" onClick={onDelete} disabled={deleting} aria-label={`Eliminar ${categoryLabels[run.category]} de ${formatPeriod(run.reportingPeriod)}`} title="Eliminar registro"><Trash2 size={14} /><span>Eliminar</span></button>}
+        </div>
+      ) : <span className="run-readonly-label">Solo lectura</span>}
       <details className="run-details">
         <summary>
           Ver trazabilidad <ChevronDown size={13} />
@@ -2404,7 +2373,7 @@ function RunHistory({ calculationId }: { calculationId: string }) {
     setLoading(true);
     setError("");
     try {
-      const response = await fetch(
+      const response = await appFetch(
         `/api/environment/runs/${encodeURIComponent(calculationId)}/history`,
       );
       if (!response.ok) throw new Error("No fue posible cargar el historial.");
@@ -2733,6 +2702,7 @@ function ActionView({
 
 function CaptureModal({
   tenantId,
+  allowHeadcount,
   library,
   initialCategory,
   initialRun,
@@ -2743,6 +2713,7 @@ function CaptureModal({
   lastCreated,
 }: {
   tenantId: string;
+  allowHeadcount: boolean;
   library: ActivityOptions | null;
   initialCategory: ActivityCategory;
   initialRun: CalculationResult | null;
@@ -2774,7 +2745,7 @@ function CaptureModal({
   );
   const [periodModules, setPeriodModules] = useState<MeasurementModule[]>(library?.modules ?? []);
   const [employeeCount, setEmployeeCount] = useState(
-    initialActivity?.employeeCount === undefined
+    !allowHeadcount || initialActivity?.employeeCount === undefined
       ? ""
       : String(initialActivity.employeeCount),
   );
@@ -2904,7 +2875,7 @@ function CaptureModal({
 
   useEffect(() => {
     let active = true;
-    fetch(`/api/environment/options?reportingPeriod=${encodeURIComponent(reportingPeriod)}`)
+    appFetch(`/api/environment/options?reportingPeriod=${encodeURIComponent(reportingPeriod)}`)
       .then(async (response) => {
         if (!response.ok) throw new Error("No se pudieron cargar los parámetros del período.");
         return await response.json() as ActivityOptions;
@@ -2992,6 +2963,7 @@ function CaptureModal({
       employeeContext.current.reportingPeriod !== reportingPeriod;
     employeeContext.current = { facilityName, reportingPeriod };
     employeeCountEdited.current = false;
+    if (!allowHeadcount) return;
     if (contextChanged) setEmployeeCount("");
     if (!facilityName.trim()) return;
     let active = true;
@@ -3001,7 +2973,7 @@ function CaptureModal({
         : facilityIdForName(facilityName);
     const query = new URLSearchParams({ facilityId, reportingPeriod });
     const timeout = window.setTimeout(() => {
-      fetch(`/api/environment/headcounts/current?${query.toString()}`)
+      appFetch(`/api/environment/headcounts/current?${query.toString()}`)
         .then((response) => (response.ok ? response.json() : null))
         .then((data: { employeeCount: number | null } | null) => {
           if (active && data && !employeeCountEdited.current)
@@ -3015,7 +2987,7 @@ function CaptureModal({
       active = false;
       window.clearTimeout(timeout);
     };
-  }, [facilityName, reportingPeriod, initialActivity?.facilityId, initialActivity?.facilityName]);
+  }, [allowHeadcount, facilityName, reportingPeriod, initialActivity?.facilityId, initialActivity?.facilityName]);
   useEffect(() => {
     const handleKey = (event: KeyboardEvent) => {
       if (event.key === "Escape") onClose();
@@ -3053,7 +3025,7 @@ function CaptureModal({
       activityUnit: activeUnit,
       geography,
       reportingPeriod,
-      ...(employeeCount !== "" ? { employeeCount: Number(employeeCount) } : {}),
+      ...(allowHeadcount && employeeCount !== "" ? { employeeCount: Number(employeeCount) } : {}),
       sourceType: sourceType as EnvironmentalInput["sourceType"],
       sourceReference,
       quality: qualityMap,
@@ -3309,7 +3281,7 @@ function CaptureModal({
                 </div>
               </div>
             </InputField>
-            <InputField label="Empleados de la sede">
+            {allowHeadcount && <InputField label="Empleados de la sede">
               <input
                 type="number"
                 min="1"
@@ -3326,7 +3298,7 @@ function CaptureModal({
               <span className="field-hint" id="employee-count-hint">
                 Opcional. Si lo informas, se reutiliza en esta sede y mes.
               </span>
-            </InputField>
+            </InputField>}
             <InputField label="Geografía">
               <select
                 value={geography}

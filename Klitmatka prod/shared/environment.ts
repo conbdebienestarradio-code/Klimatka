@@ -75,6 +75,7 @@ export interface DigitalUsageMetrics {
 export interface CalculationResult {
   calculationId: string;
   createdByUserId?: string;
+  createdByRole?: "admin" | "member";
   category: ActivityCategory;
   scope: string;
   activityValue: number;

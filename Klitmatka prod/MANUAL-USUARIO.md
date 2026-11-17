@@ -1,129 +1,214 @@
-# Manual de usuario de Klimatka
+﻿# Manual de usuario de Klimatka
 
-**Edición inicial · Alcance: funciones disponibles en la aplicación actual**
+**Guía para el uso de la plataforma de inteligencia ambiental empresarial**  
+**Edición:** 1.2 · **Alcance:** funciones disponibles en la aplicación actual
 
 ## Índice
 
-- [¿Qué es Klimatka?](#qué-es-klimatka)
 - [1. Propósito y alcance](#1-propósito-y-alcance)
-- [2. Navegación](#2-navegación)
-- [3. Consultar el Resumen](#3-consultar-el-resumen)
-- [4. Registrar una actividad](#4-registrar-una-actividad)
-- [5. Consultar, corregir o eliminar registros](#5-consultar-corregir-o-eliminar-registros)
-- [6. Interpretar Calidad](#6-interpretar-calidad)
-- [7. Usar el Plan de acción](#7-usar-el-plan-de-acción)
-- [8. Exportar información](#8-exportar-información)
-- [9. Biblioteca de factores y estados](#9-biblioteca-de-factores-y-estados)
-- [10. Problemas frecuentes](#10-problemas-frecuentes)
-- [11. Glosario breve](#11-glosario-breve)
-
-## ¿Qué es Klimatka?
-
-Klimatka es la plataforma de inteligencia ambiental de Bienestar Radio. Su propósito es ayudar a transformar los datos de la operación en una línea base clara para orientar mejores decisiones, tal como expresa su lema: **«Una línea base clara para transformar cada dato en una mejor decisión»**.
-
-La herramienta permite registrar actividades ambientales —como consumo de electricidad, combustibles, agua, materiales, residuos, refrigerantes, emisiones al aire y uso digital— y calcular resultados con los factores disponibles en su biblioteca. También facilita consultar y comparar períodos, revisar la calidad y trazabilidad de los datos, identificar oportunidades de mejora y exportar información para reportes.
-
-Klimatka busca que los resultados sean comprensibles y rastreables: cada cálculo debe interpretarse junto con la evidencia de la actividad, el factor utilizado, su fuente, estado y las advertencias metodológicas disponibles. No sustituye la documentación de respaldo ni convierte automáticamente datos incompletos o factores pendientes en información oficialmente validada.
+- [2. Crear una cuenta e iniciar sesión](#2-crear-una-cuenta-e-iniciar-sesión)
+- [3. Administrar empresas y miembros](#3-administrar-empresas-y-miembros)
+- [4. Navegar por la herramienta](#4-navegar-por-la-herramienta)
+- [5. Consultar el Resumen](#5-consultar-el-resumen)
+- [6. Registrar una actividad](#6-registrar-una-actividad)
+- [7. Revisar, corregir o eliminar registros](#7-revisar-corregir-o-eliminar-registros)
+- [8. Interpretar Calidad](#8-interpretar-calidad)
+- [9. Usar el Plan de acción](#9-usar-el-plan-de-acción)
+- [10. Exportar información](#10-exportar-información)
+- [11. Factores, estados y responsabilidades](#11-factores-estados-y-responsabilidades)
+- [12. Resolver problemas frecuentes](#12-resolver-problemas-frecuentes)
+- [Glosario](#glosario)
 
 ## 1. Propósito y alcance
 
-Klimatka permite registrar actividad ambiental, calcular resultados con factores disponibles en la biblioteca interna y revisar su período, calidad y trazabilidad. Este manual describe lo que se puede utilizar hoy en la aplicación para Bienestar Radio.
+Klimatka ayuda a organizar datos de actividad ambiental, calcular resultados con los factores disponibles y revisar períodos, calidad y trazabilidad. Incluye módulos para electricidad, combustibles, agua, residuos, materiales, empaques, refrigerantes, emisiones al aire, uso de inteligencia artificial e internet.
 
-La bienvenida aparece durante cinco segundos y luego se abre el espacio de trabajo. En esta versión no existe inicio de sesión, administración efectiva de usuarios ni asignación de permisos por persona. Las etiquetas «Administración» y «Organización» que aparecen en pantalla son informativas; no representan un proceso de acceso o configuración. Este manual deberá ampliarse cuando se programe el inicio de sesión y cualquier otra función futura.
+Los resultados deben interpretarse junto con la actividad registrada, su fuente, el factor aplicado y las advertencias mostradas. La plataforma no sustituye los documentos de respaldo ni convierte un factor pendiente de validación en un factor oficialmente validado. Este manual describe el uso de las funciones disponibles; algunas opciones dependen de los permisos de la cuenta y de los parámetros cargados.
 
-## 2. Navegación
+## 2. Crear una cuenta e iniciar sesión
 
-El menú lateral contiene cuatro vistas:
+### Crear un perfil
 
-- **Resumen:** indicadores, comparación de períodos, línea base de GEI, módulos ambientales y exportaciones.
-- **Registros:** actividades calculadas, búsqueda, corrección, eliminación y trazabilidad.
-- **Calidad:** lectura del índice DQ y sus cinco dimensiones.
-- **Plan de acción:** ruta de mejora de referencia y oportunidades que se generan cuando los registros aportan evidencia suficiente.
+1. En la pantalla de acceso, selecciona **Crear mi perfil**.
+2. Completa nombre, apellidos, cargo profesional, correo electrónico, contraseña y confirmación.
+3. La contraseña debe tener entre 12 y 128 caracteres.
+4. Selecciona **Crear mi perfil**. Después podrás crear tu primera empresa o aceptar la invitación que recibiste por correo.
 
-En pantallas pequeñas, el menú se abre con el botón de menú. El enlace **Conoce el método** lleva a **Calidad**. La bienvenida no solicita información ni configura la organización.
+El perfil personal puede estar asociado a varias empresas. Usa un correo al que tengas acceso, especialmente para las invitaciones y la recuperación de contraseña.
 
-## 3. Consultar el Resumen
+### Iniciar sesión
+
+1. Abre **Inicia sesión aquí** o la opción **Iniciar sesión**.
+2. Escribe el correo asociado a tu perfil y la contraseña.
+3. Selecciona **Iniciar sesión**.
+
+### Recuperar el acceso
+
+1. En la pantalla de inicio de sesión, selecciona **¿Olvidaste tu contraseña?**.
+2. Ingresa el correo del perfil y selecciona **Enviar enlace**.
+3. Revisa tu bandeja de entrada y correo no deseado; abre el enlace recibido.
+4. Escribe y confirma una nueva contraseña de al menos 12 caracteres y selecciona **Actualizar contraseña**.
+
+Si la pantalla indica que la recuperación por correo no está disponible, contacta al equipo administrador de Klimatka.
+
+## 3. Administrar empresas y miembros
+
+### Crear o cambiar de empresa
+
+1. Abre el selector del espacio de trabajo situado en la parte superior del menú lateral. También puedes llegar a **Tus empresas** al terminar el registro si aún no tienes una empresa activa.
+2. Para crear una, completa **Nombre de la empresa**, **RIF**, **Número de empleados** y **Correo de la empresa**.
+3. Selecciona **Crear espacio empresarial**. La persona que crea el espacio queda como administradora de esa empresa.
+4. Si tu perfil tiene acceso a varias empresas, elige la empresa que quieres abrir en **Espacios disponibles**.
+
+Cada empresa tiene sus propios miembros y registros. El nombre y el RIF deben ser únicos. El número de empleados del perfil de empresa es informativo; no se usa por sí solo para calcular los indicadores ambientales.
+
+### Invitar a una persona
+
+La función está disponible para administradores de empresa. La invitación se envía al correo indicado; no hace falta copiar ni compartir un enlace desde la pantalla de administración.
+
+1. En el menú lateral, selecciona **Invitar a un usuario** para abrir **Personas y accesos**.
+2. Ingresa el correo de la persona y selecciona **Enviar invitación por correo**. La invitación pendiente vence en 7 días.
+3. La persona abre el mensaje y crea su perfil o inicia sesión con ese mismo correo para aceptar la invitación.
+4. En **Personas y accesos**, la administración puede consultar quién tiene acceso, revisar invitaciones pendientes, cancelar una invitación pendiente o revocar el acceso de un miembro.
+
+Si aparece el aviso **El envío de correos aún no está configurado**, la invitación no se ha enviado. El equipo que administra el despliegue de Klimatka debe configurar el servicio de correo. En la demostración local se muestra **Aún no se envían correos** y la invitación se simula; no se envía un mensaje real.
+
+Una vez aceptada, la membresía no vence: se mantiene hasta que una persona administradora revoque el acceso. El trabajador puede registrar actividades y corregir las propias desde **Mi actividad**; también puede consultar los datos de la empresa y ver los demás registros en modo de solo lectura. No puede modificar registros de otras personas, cambiar la dotación de las sedes ni eliminar sus capturas.
+
+Las actividades de los trabajadores se incluyen en los totales empresariales. Al revocar el acceso se bloquea su entrada a la empresa, pero sus registros, versiones e historial de auditoría se conservan; no se borran ni se restan de los indicadores.
+
+### Cambiar de empresa o cerrar sesión
+
+Selecciona el nombre de la empresa en la parte superior izquierda para volver a **Tus empresas** y cambiar el espacio activo. Para salir de la cuenta, utiliza **Cerrar sesión** junto a tu nombre en el menú lateral.
+
+## 4. Navegar por la herramienta
+
+El menú lateral contiene las vistas principales:
+
+- **Resumen:** indicadores, consulta y comparación de períodos, intensidades por empleado y exportaciones.
+- **Registros:** búsqueda y consulta de las actividades de la empresa. Los administradores pueden corregir registros; los trabajadores pueden corregir los propios.
+- **Mi actividad:** vista personal de las capturas del trabajador; desde aquí puede registrar actividades y corregir las propias, pero no eliminarlas.
+- **Calidad:** consulta el promedio del Índice DQ y sus cinco dimensiones. Las cuentas administradoras la ven en el menú; el botón **Conoce el método** también abre esta vista.
+- **Plan de acción:** ruta de mejora de referencia y oportunidades generadas a partir de los registros.
+
+En pantallas pequeñas, utiliza el botón de menú para abrir o cerrar la navegación. El selector superior izquierdo cambia de empresa. El botón de notificaciones informa si hay avisos nuevos; si indica que no hay notificaciones, no es necesario realizar ninguna acción.
+
+La administración de módulos y parámetros metodológicos está reservada a cuentas autorizadas por Klimatka; no forma parte de las tareas de administración ordinaria de una empresa.
+
+## 5. Consultar el Resumen
 
 1. Abre **Resumen**.
 2. En **Período de consulta**, elige **Año de gestión** o **Mes específico**.
-3. Selecciona el **Año**. En la vista mensual, selecciona también el **Mes**.
-4. Usa **Comparar con** para elegir el año de comparación. En vista mensual, se compara el mismo mes entre los años seleccionados.
+3. Selecciona el año y, para la vista mensual, el mes.
+4. En **Comparar con**, elige el año de comparación. En una consulta mensual, Klimatka compara el mismo mes de ambos años.
 
-La tabla presenta los valores de ambos períodos, la **Diferencia absoluta** y la **Variación (%)**. Si el período no tiene datos, verás mensajes como «Sin datos» o «Sin registros»; no significa que el valor sea cero. Si el período de comparación tiene una base igual a cero, la variación porcentual aparece como no aplicable.
+La tabla de comparación muestra los dos valores, la diferencia absoluta y la variación porcentual. **Sin datos** significa que no hay registros para ese período; no equivale a cero. Si el valor de comparación es cero, el porcentaje aparece como no aplicable.
 
-El resumen también muestra huella de GEI, electricidad, agua, residuos, uso de IA e internet, línea base de GEI e Índice DQ. Los mosaicos de **Módulos ambientales** abren el formulario de captura con el módulo elegido. Si aparece **Transparencia metodológica**, revisa el aviso: algunos factores pueden estar pendientes de validación oficial y la herramienta conserva ese estado y las reglas de respaldo aplicadas.
+El Resumen presenta indicadores ambientales y puede incluir **Indicadores por sede y empleado**. Para calcular intensidades anuales se necesita la dotación de los 12 meses; si faltan datos, la pantalla informa la cobertura disponible y no inventa un promedio. La dotación puede anotarse al registrar una actividad y se guarda por sede y mes. El total declarado al crear la empresa no sustituye ese registro mensual.
 
-## 4. Registrar una actividad
+Los mosaicos de módulos ambientales permiten abrir el formulario de actividad con el módulo seleccionado. Usa **Añadir actividad** para iniciar una captura sin seleccionar previamente un módulo.
 
-Puedes iniciar una captura con **Registrar actividad** en el Resumen, **Nueva actividad** en Registros, **Añadir actividad** en el Plan de acción o seleccionando un mosaico de módulo en el Resumen.
+## 6. Registrar una actividad
+
+Puedes comenzar desde **Añadir actividad** en el Resumen, **Añadir actividad** en Registros o Plan de acción, o desde un mosaico de módulo del Resumen.
 
 ### Datos generales
 
-1. En **Módulo**, elige una de las opciones: Electricidad, Combustible, Agua, Residuos, Materiales, Empaques, Refrigerantes, Emisiones al aire, Uso de IA o Internet.
-2. En **Actividad / factor**, selecciona la opción disponible para ese módulo. Las opciones dependen de la biblioteca cargada.
-3. Indica la **Cantidad** y la **Unidad**; las unidades disponibles cambian según el módulo y el factor.
-4. Completa **Instalación**, **Período reportado**, **Geografía**, **Tipo de fuente** y **Referencia / documento de respaldo**. Las geografías disponibles actualmente son Venezuela (VE), Estados Unidos (CAMX) y Colombia (nacional). Los tipos de fuente incluyen factura comercial, medición directa, registro operativo y estimación.
-5. Puntúa las cinco dimensiones de calidad con **0 = baja**, **1 = parcial** o **2 = completa**, usando la evidencia disponible. Debes completar las cinco para enviar el registro.
-6. Selecciona **Validar y calcular**. Si se muestra un error, corrige los campos indicados y vuelve a intentarlo. Si decides salir, usa **Cancelar**.
+Completa los campos obligatorios del formulario:
 
-### Campos particulares por módulo
+1. **Módulo** y **Actividad / factor**: selecciona las opciones disponibles. La lista cambia según el módulo y el período.
+2. **Cantidad** y **Unidad**: ingresa el dato respaldado por la fuente. Las unidades disponibles dependen del módulo.
+3. **Instalación**: indica la sede o planta a la que corresponde la actividad.
+4. **Período reportado**: selecciona mes y año.
+5. **Geografía**: elige la ubicación que corresponda entre las opciones disponibles: Venezuela (VE), Estados Unidos (CAMX) o Colombia (nacional).
+6. **Tipo de fuente**: selecciona factura comercial, medición directa, registro operativo o estimación.
+7. **Referencia / documento de respaldo**: escribe una identificación, por ejemplo el número de factura o nombre del informe. Este campo registra la referencia; no carga el archivo.
+8. **Calidad y trazabilidad**: asigna una puntuación a cada una de las cinco dimensiones: **0 = baja**, **1 = parcial** o **2 = completa**. Debes completar las cinco para guardar.
+9. **Empleados de la sede**: campo opcional. Si lo informas, se conserva para esa sede y ese mes y puede reutilizarse en otra actividad del mismo contexto.
+10. Selecciona **Validar y calcular**. Si aparece un mensaje de error, corrige lo indicado y vuelve a intentarlo. Selecciona **Cancelar** para salir sin guardar.
 
-- **Electricidad:** elige cálculo _Location-based_ con factor de red o _Market-based_ con factor contractual. Para _Market-based_ debes aportar el factor contractual y su fuente.
-- **Combustible:** selecciona el combustible disponible; la unidad depende del combustible.
-- **Agua:** puedes incluir agua descargada, reutilizada y un denominador productivo cuando tengas esos datos. El balance se presenta como diferencia o agua no contabilizada, no como pérdida atribuida.
-- **Residuos:** indica si el residuo es peligroso o no peligroso y el factor/destino disponible. No dejes la clasificación sin seleccionar.
-- **Materiales:** puedes registrar contenido reciclado, material recuperado, material elegible para circularidad y datos del producto o subproductos, si están respaldados. La recuperabilidad potencial y la recuperación real son datos distintos.
-- **Empaques:** puedes aportar contenido reciclado y masa recuperada. No se infiere masa recuperada a partir de que el empaque sea reciclable.
-- **Refrigerantes:** selecciona el refrigerante disponible y registra la cantidad en una unidad permitida.
-- **Emisiones al aire:** selecciona CO₂, CH₄, N₂O, PM10, NOx, SOx o VOC. Para CH₄, indica el origen solicitado. Los contaminantes criterio no se convierten automáticamente a CO₂e.
-- **Uso de IA:** indica el tipo de uso, proveedor y solicitudes. El modelo y los tokens de entrada/salida son opcionales.
-- **Internet:** indica el tipo de conexión, proveedor y tráfico total. La subida y descarga son opcionales.
+### Datos específicos de cada módulo
 
-En los módulos digitales, registra **Energía informada**, **Agua informada** o **GEI informado** únicamente cuando el proveedor o una medición los documente. Solicitudes, tokens y GB describen actividad, no emisiones; el GEI reportado por la fuente se conserva separado y no se agrega a los alcances corporativos.
+- **Electricidad:** elige _Location-based_ para usar el factor de red o _Market-based_ para un factor contractual. La opción contractual requiere ingresar el factor y su fuente.
+- **Combustible:** selecciona el combustible disponible; la unidad depende de la opción elegida.
+- **Agua:** puedes añadir agua descargada, reutilizada y un denominador productivo si cuentas con esos datos. El balance se presenta como diferencia o agua no contabilizada; no se atribuye automáticamente a una pérdida.
+- **Residuos:** clasifica cada actividad como residuo peligroso o no peligroso y selecciona el destino disponible.
+- **Materiales:** contenido reciclado, masa recuperada, material elegible para circularidad y datos de producto o subproductos son opcionales y deben estar respaldados. La recuperabilidad potencial no equivale a recuperación real.
+- **Empaques:** puedes informar contenido reciclado y masa recuperada. La plataforma no infiere una masa recuperada a partir de que un empaque sea reciclable.
+- **Refrigerantes:** selecciona el refrigerante disponible e ingresa la cantidad en una unidad permitida.
+- **Emisiones al aire:** selecciona CO₂, CH₄, N₂O, PM10, NOx, SOx o VOC. Para CH₄, especifica el origen solicitado. Los contaminantes criterio no se convierten automáticamente a CO₂e.
+- **Uso de IA:** registra el tipo de uso, proveedor y número de solicitudes. Modelo y tokens de entrada y salida son opcionales.
+- **Internet:** registra el tipo de conexión, proveedor y tráfico total. Los datos de subida y descarga son opcionales.
 
-## 5. Consultar, corregir o eliminar registros
+En los módulos de IA e internet, ingresa energía, agua o GEI informados solo cuando una medición o el proveedor los documente. Solicitudes, tokens y GB representan actividad, no emisiones. El GEI comunicado por el proveedor se mantiene separado y no se suma automáticamente al inventario corporativo.
 
-En **Registros**, puedes buscar por categoría, período o factor. Cada fila muestra la actividad, instalación, período, resultado, calidad DQ y estado del cálculo. Abre **Ver trazabilidad** para revisar el factor aplicado, estado y fuente del factor, fuente de actividad, puntuación/calidad, incertidumbre y advertencias metodológicas. Para registros digitales también se muestran los datos disponibles de proveedor, tokens, tráfico y recursos reportados.
+## 7. Revisar, corregir o eliminar registros
 
-- **Modificar:** abre el registro, corrige los datos y selecciona **Guardar corrección**. La actividad se valida y calcula de nuevo; la versión anterior queda disponible en **Historial de versiones**.
-- **Eliminar:** confirma el mensaje del sistema. El registro deja de participar en los totales activos, pero se conserva en el historial de trazabilidad. La eliminación no equivale a restaurar el registro.
+Abre **Registros** para consultar las actividades guardadas. El campo de búsqueda permite localizar registros por categoría, período o factor. Cada fila muestra el módulo, la instalación, el período, la actividad, el resultado, el Índice DQ y el estado del cálculo.
 
-## 6. Interpretar Calidad
+- **Ver trazabilidad:** despliega el detalle del factor utilizado, su estado y fuente, la fuente de actividad, las puntuaciones de calidad, incertidumbre y advertencias metodológicas. En actividades digitales también aparecen los datos de proveedor y uso que se hayan informado.
+- **Modificar:** selecciona **Modificar**, corrige los datos y guarda. Klimatka vuelve a validar y calcular la actividad; la versión anterior permanece en **Historial de versiones**. Un trabajador puede modificar sus propios registros; la administración puede corregir registros de la empresa.
+- **Eliminar:** esta opción solo está disponible para registros creados por administración. Las capturas de trabajadores no se pueden eliminar; su historial y su aporte a los totales empresariales se conservan.
 
-La vista **Calidad** resume el Índice DQ sobre 10 y muestra cinco dimensiones: **Fuente**, **Medición**, **Representatividad temporal**, **Representatividad operacional** y **Trazabilidad**. Cada dimensión se puntúa de 0 a 2 durante la captura; la vista ayuda a entender la evidencia disponible, no a cambiar la puntuación después de guardar. El nivel global se muestra como alta, media-alta, media, baja o insuficiente. Un puntaje alto indica mejor respaldo del dato, no mejor desempeño ambiental.
+Los trabajadores consultan todos los registros empresariales en modo de solo lectura y encuentran sus propias capturas en **Mi actividad**. Revocar el acceso a un trabajador no borra sus mediciones, versiones, ni el historial de auditoría. Revisa la sede y el período antes de corregir, ya que esos datos determinan dónde se reflejará el cálculo.
 
-## 7. Usar el Plan de acción
+## 8. Interpretar Calidad
 
-El **Plan de acción** presenta una ruta de referencia organizada por horizontes (0–90 días, 3–6, 6–12 y 12–36 meses) y **Oportunidades priorizadas** derivadas de registros cuando se cumplen los umbrales documentados y hay datos suficientes.
+El **Índice DQ** resume la calidad de la evidencia en una escala de 0 a 10 a partir de cinco dimensiones:
 
-Las oportunidades pueden incluir acción, prioridad, causa u oportunidad, plazo, inversión, disponibilidad y recuperación estimada de la inversión. Cuando falten datos para estimarla, la herramienta lo indica. Esta pantalla no asigna responsables, no marca tareas como completadas ni confirma ahorros ejecutados; las oportunidades son recomendaciones que requieren revisión y verificación por parte de la organización.
+1. **Fuente:** calidad y jerarquía de la fuente declarada.
+2. **Medición:** dato medido, documentado o estimado.
+3. **Representatividad temporal:** cobertura del período reportado.
+4. **Representatividad operacional:** cobertura de procesos e instalaciones.
+5. **Trazabilidad:** existencia de evidencia y capacidad de revisión.
 
-## 8. Exportar información
+Cada dimensión se puntúa entre 0 y 2. El nivel general se interpreta así: **9–10 alta**, **7–8 media-alta**, **5–6 media**, **3–4 baja** y **0–2 insuficiente**. Un puntaje alto representa mejor respaldo del dato, no necesariamente un menor impacto ambiental. La puntuación se asigna al registrar o corregir la actividad; la vista Calidad sirve para interpretar los datos guardados.
 
-- **Exportar PDF:** descarga `informe-ejecutivo-ambiental.pdf` con el período que está seleccionado en el Resumen. Si ese período no tiene registros, la herramienta muestra un aviso y no genera el archivo.
-- **Datos para Power BI:** descarga `datos-ambientales-power-bi.csv`, con columnas para período, instalación, módulo, actividad, uso digital, GEI, alcance, fuente, calidad y estado del factor. Actualmente esta exportación incluye los registros guardados en general, no solo el período que se ve en el Resumen. Si todavía no hay registros, no se genera el archivo.
+## 9. Usar el Plan de acción
 
-## 9. Biblioteca de factores y estados
+El **Plan de acción** presenta una ruta de referencia en cuatro horizontes: 0–90 días, 3–6 meses, 6–12 meses y 12–36 meses. También puede mostrar oportunidades priorizadas cuando hay registros y evidencia suficientes.
 
-La biblioteca se usa para ofrecer factores y opciones en los formularios, pero la versión actual no tiene una pantalla para que el usuario consulte, agregue, edite o apruebe factores. Para entender el cálculo, consulta **Ver trazabilidad** en el registro y revisa factor, estado, fuente y advertencias. Si un factor aparece pendiente o se aplicó una regla de respaldo, interpreta el resultado con esa salvedad; no presentes un factor pendiente como validado oficialmente.
+Cada oportunidad puede incluir una acción, prioridad, causa, oportunidad, plazo, inversión, disponibilidad y recuperación estimada. Si faltan datos para calcular la recuperación, se indica que se requieren valores verificados. Las sugerencias no asignan responsables, no marcan tareas como completadas ni confirman ahorros ejecutados; deben revisarse y validarse por la organización.
 
-## 10. Problemas frecuentes
+## 10. Exportar información
 
-- **No aparecen resultados:** verifica el año, mes y período elegidos; la aplicación muestra un estado vacío cuando no hay registros en ese corte.
+Desde el Resumen puedes descargar:
+
+- **Exportar PDF:** genera `informe-ejecutivo-ambiental.pdf` para el período consultado. Si no hay registros, se muestra un aviso en vez de descargar un informe vacío. Los registros con calidad **Insuficiente** no forman parte de las cifras consolidadas del informe.
+- **Datos para Power BI:** genera `datos-ambientales-power-bi.csv` con registros de la empresa para los períodos guardados, no solo el período seleccionado en el Resumen. Incluye período, instalación, módulo, actividad, uso digital reportado, GEI, alcance, fuente, calidad y estado del factor. Si no hay registros, no se genera el archivo.
+
+Al compartir los archivos, verifica que correspondan a la empresa y al período requeridos. Conserva las fuentes originales de los datos para respaldar las cifras exportadas.
+
+## 11. Factores, estados y responsabilidades
+
+Los formularios ofrecen factores y opciones cargados en la biblioteca metodológica. Si la trazabilidad indica un factor pendiente de validación o una regla de respaldo, conserva esa salvedad al interpretar o compartir el resultado; no lo presentes como validado oficialmente ni lo sustituyas por un valor sin fuente.
+
+La creación y actualización de módulos de medición está restringida a cuentas autorizadas por Klimatka. Cada actualización metodológica crea una nueva versión con fuente y fecha de vigencia; las versiones anteriores y los cálculos existentes conservan su trazabilidad. Un factor sin fuente documental no debe tratarse como validado.
+
+## 12. Resolver problemas frecuentes
+
+- **No aparecen resultados:** revisa el año y mes seleccionados y confirma que existan registros para ese período y empresa.
 - **No se genera el PDF:** selecciona un período con registros.
-- **No se genera el CSV:** aún no hay registros ambientales para exportar o no fue posible preparar la descarga.
-- **No se puede guardar:** revisa el mensaje de validación, completa los campos requeridos y asigna las cinco puntuaciones de calidad.
-- **Aparece un aviso metodológico o un factor pendiente:** revisa la trazabilidad y documenta la salvedad; no sustituyas el factor por uno no autorizado.
-- **No encuentras administración, acceso o permisos:** no están implementados en esta versión. Este manual se actualizará cuando se programe el inicio de sesión y las áreas correspondientes.
+- **No se genera el CSV:** verifica que la empresa tenga registros guardados o vuelve a intentar la descarga.
+- **No se puede guardar una actividad:** completa los campos obligatorios, selecciona las cinco puntuaciones de calidad y revisa el mensaje de validación.
+- **Aparece una advertencia metodológica o un factor pendiente:** consulta **Ver trazabilidad** y conserva la advertencia al interpretar el resultado.
+- **No puedes iniciar sesión:** comprueba que uses el correo del perfil. Si no recuerdas la contraseña, utiliza **¿Olvidaste tu contraseña?**.
+- **No llega el enlace de recuperación:** revisa el correo no deseado. Si la pantalla informa que la recuperación no está disponible, contacta al equipo administrador.
+- **No puedes aceptar una invitación:** verifica que el enlace del correo no haya vencido y que estés usando el mismo correo al que se envió. Solicita una invitación nueva si es necesario.
+- **El envío de correos aún no está configurado:** la invitación no se ha enviado. Contacta al equipo que administra el despliegue de Klimatka para habilitar el servicio de correo. En la demostración local las invitaciones son simuladas.
+- **No puedes invitar a otra persona o administrar la empresa:** confirma que tu perfil tenga el rol de administradora en esa empresa.
+- **No ves una opción metodológica:** la biblioteca y la administración de módulos dependen de los permisos de plataforma.
+- **No aparecen intensidades por empleado:** registra la dotación por sede y mes. Para el resultado anual se requiere información de los doce meses.
 
-## 11. Glosario breve
+## Glosario
 
-- **GEI:** gases de efecto invernadero. **CO₂e** expresa su impacto en una unidad equivalente de CO₂.
+- **GEI:** gases de efecto invernadero.
+- **CO₂e:** unidad equivalente de dióxido de carbono usada para expresar el impacto de gases de efecto invernadero.
 - **tCO₂e / kgCO₂e:** toneladas o kilogramos de CO₂ equivalente.
-- **Índice DQ:** índice de calidad del dato, calculado a partir de cinco dimensiones de evidencia.
-- **Factor de emisión:** valor usado junto con la actividad registrada para calcular un resultado ambiental.
-- **Fallback / respaldo:** regla alternativa aplicada cuando corresponde; su uso y estado deben consultarse en la trazabilidad.
+- **Índice DQ:** índice de calidad del dato calculado a partir de cinco dimensiones de evidencia.
+- **Factor de emisión:** valor usado junto con una actividad para calcular un resultado ambiental.
+- **Regla de respaldo:** alternativa metodológica aplicada cuando corresponde; su uso debe revisarse en la trazabilidad.
 
 ---
 
-**Control de actualización:** este documento corresponde a la interfaz disponible al momento de su redacción. Al incorporar inicio de sesión, roles, permisos u otras funciones, actualizar las instrucciones y las capturas antes de distribuir una nueva edición.
+**Control de actualización:** este manual describe las funciones visibles en la aplicación al momento de su edición. Si cambian las pantallas, los permisos o los procedimientos, actualiza las instrucciones antes de distribuir una nueva edición.

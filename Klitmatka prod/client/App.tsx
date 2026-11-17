@@ -8,6 +8,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { BrowserRouter, Navigate, Routes, Route } from "react-router-dom";
 import type { AuthIdentity } from "@shared/auth";
+import { appFetch, getDemoIdentity, isDemoMode, saveDemoIdentity } from "./lib/demo-api";
 import AuthPage from "./pages/Auth";
 import CompanyManager from "./pages/CompanyManager";
 import PasswordRecovery from "./pages/PasswordRecovery";
@@ -16,12 +17,14 @@ import PlatformAdminPage from "./pages/PlatformAdmin";
 import NotFound from "./pages/NotFound";
 
 function ProtectedIndex() {
-  const [identity, setIdentity] = useState<AuthIdentity | null | undefined>(undefined);
+  const demoMode = isDemoMode();
+  const [identity, setIdentity] = useState<AuthIdentity | null | undefined>(demoMode ? getDemoIdentity() : undefined);
   const [manageCompanies, setManageCompanies] = useState(false);
 
   useEffect(() => {
+    if (demoMode) return;
     let active = true;
-    fetch("/api/auth/me")
+    appFetch("/api/auth/me")
       .then(async (response) => {
         if (!response.ok) return null;
         return await response.json() as AuthIdentity;
@@ -33,8 +36,13 @@ function ProtectedIndex() {
         if (active) setIdentity(null);
       });
     return () => { active = false; };
-  }, []);
+  }, [demoMode]);
 
+  if (demoMode && !identity) return <Navigate to="/login?demo=1" replace />;
+  if (demoMode && identity) {
+    if (!identity.company || manageCompanies) return <CompanyManager identity={identity} onIdentityChange={(nextIdentity) => { saveDemoIdentity(nextIdentity); setIdentity(nextIdentity); }} onContinue={() => setManageCompanies(false)} />;
+    return <Index identity={identity as AuthIdentity & { company: NonNullable<AuthIdentity["company"]> }} onManageCompanies={() => setManageCompanies(true)} demoMode />;
+  }
   if (identity === undefined) return <main className="auth-loading">Comprobando el acceso…</main>;
   if (!identity) return <Navigate to="/register" replace />;
   if (!identity.company || manageCompanies) return <CompanyManager identity={identity} onIdentityChange={setIdentity} onContinue={() => setManageCompanies(false)} />;

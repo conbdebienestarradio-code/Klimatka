@@ -1,9 +1,6 @@
-import "dotenv/config";
 import express from "express";
 import { requireAuthenticated, requireCompany } from "./auth-middleware";
 import { authRouter } from "./routes/auth";
-import { environmentRouter } from "./routes/environment";
-import { platformAdminRouter } from "./routes/platform-admin";
 
 export function createServer() {
   const app = express();
@@ -11,15 +8,19 @@ export function createServer() {
   app.use(express.json());
   app.use(express.urlencoded({ extended: true }));
 
-  // Example API routes
   app.get("/api/ping", (_req, res) => {
-    const ping = process.env.PING_MESSAGE ?? "ping";
-    res.json({ message: ping });
+    res.json({ message: process.env.PING_MESSAGE ?? "ping" });
   });
 
   app.use("/api/auth", authRouter);
-  app.use("/api/platform-admin", requireAuthenticated, platformAdminRouter);
-  app.use("/api/environment", requireAuthenticated, requireCompany, environmentRouter);
+  app.use("/api/platform-admin", requireAuthenticated, async (req, res, next) => {
+    const { platformAdminRouter } = await import("./routes/platform-admin");
+    platformAdminRouter(req, res, next);
+  });
+  app.use("/api/environment", requireAuthenticated, requireCompany, async (req, res, next) => {
+    const { environmentRouter } = await import("./routes/environment");
+    environmentRouter(req, res, next);
+  });
 
   return app;
 }

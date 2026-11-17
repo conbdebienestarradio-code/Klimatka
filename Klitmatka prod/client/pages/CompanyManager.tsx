@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from "react";
 import { Building2, ChevronRight, Leaf, LoaderCircle, Plus, Users } from "lucide-react";
 import type { AuthIdentity } from "@shared/auth";
+import { appFetch, appLogout, setActiveCompanyId } from "../lib/demo-api";
 
 type CompanyForm = {
   companyName: string;
@@ -19,9 +20,10 @@ export default function CompanyManager({ identity, onIdentityChange, onContinue 
     setError("");
     setActiveCompanyId(companyId);
     try {
-      const response = await fetch("/api/auth/companies/switch", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ companyId }) });
+      const response = await appFetch("/api/auth/companies/switch", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ companyId }) });
       const result = await response.json();
       if (!response.ok) throw new Error(result.message ?? "No se pudo seleccionar la empresa.");
+      setActiveCompanyId(companyId);
       onIdentityChange(result as AuthIdentity);
       onContinue();
     } catch (cause) {
@@ -36,9 +38,10 @@ export default function CompanyManager({ identity, onIdentityChange, onContinue 
     setError("");
     setSaving(true);
     try {
-      const response = await fetch("/api/auth/companies", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ...form, employeeCount: Number(form.employeeCount) }) });
+      const response = await appFetch("/api/auth/companies", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ...form, employeeCount: Number(form.employeeCount) }) });
       const result = await response.json();
       if (!response.ok) throw new Error(result.message ?? "No se pudo crear la empresa.");
+      if (result.company?.id) setActiveCompanyId(result.company.id);
       onIdentityChange(result as AuthIdentity);
       onContinue();
     } catch (cause) {
@@ -87,7 +90,7 @@ export default function CompanyManager({ identity, onIdentityChange, onContinue 
           {error && <div className="auth-error" role="alert">{error}</div>}
           <button className="auth-submit" type="submit" disabled={saving}>{saving ? <LoaderCircle className="spin" size={17} /> : null}{saving ? "Guardando empresa…" : "Crear espacio empresarial"}</button>
         </form>
-        <p className="auth-switch"><button type="button" className="company-manager-logout" onClick={() => { fetch("/api/auth/logout", { method: "POST" }).finally(() => window.location.assign("/login")); }}>Cerrar sesión</button></p>
+        <p className="auth-switch"><button type="button" className="company-manager-logout" onClick={() => { void appLogout().finally(() => window.location.assign(window.location.search.includes("demo=1") ? "/login?demo=1" : "/login")); }}>Cerrar sesión</button></p>
       </section>
     </main>
   );

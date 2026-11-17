@@ -6,7 +6,7 @@ import type { AuthCompany, AuthIdentity, CompanyInvitation, CompanyRegistration,
 import type { ActivityCategory, CalculationResult, EnvironmentalInput, EnvironmentalOverview } from "../shared/environment";
 import { libraryTableCount, libraryTables } from "./environment-data";
 
-const databasePath = process.env.SW_ENVIRONMENT_DATABASE_PATH ?? path.join(process.cwd(), ".data", "sw-environment-v1.sqlite");
+const databasePath = process.env.SW_ENVIRONMENT_DATABASE_PATH ?? (process.env.VERCEL === "1" ? ":memory:" : path.join(process.cwd(), ".data", "sw-environment-v1.sqlite"));
 mkdirSync(path.dirname(databasePath), { recursive: true });
 const database = new DatabaseSync(databasePath);
 database.exec("PRAGMA foreign_keys = ON");
@@ -39,12 +39,12 @@ CREATE TABLE IF NOT EXISTS companies (company_id TEXT PRIMARY KEY, name TEXT NOT
 CREATE TABLE IF NOT EXISTS users (user_id TEXT PRIMARY KEY, email TEXT NOT NULL COLLATE NOCASE UNIQUE, first_name TEXT NOT NULL, last_name TEXT NOT NULL, job_title TEXT NOT NULL, password_salt TEXT NOT NULL, password_hash TEXT NOT NULL, created_at TEXT NOT NULL);
 CREATE TABLE IF NOT EXISTS company_memberships (company_id TEXT NOT NULL REFERENCES companies(company_id), user_id TEXT NOT NULL REFERENCES users(user_id), role TEXT NOT NULL CHECK (role IN ('admin', 'member')), created_at TEXT NOT NULL, PRIMARY KEY (company_id, user_id));
 CREATE TABLE IF NOT EXISTS auth_sessions (token_hash TEXT PRIMARY KEY, user_id TEXT NOT NULL REFERENCES users(user_id), company_id TEXT REFERENCES companies(company_id), expires_at TEXT NOT NULL, created_at TEXT NOT NULL);
-CREATE TABLE IF NOT EXISTS company_invitations (token_hash TEXT PRIMARY KEY, company_id TEXT NOT NULL REFERENCES companies(company_id), email TEXT NOT NULL COLLATE NOCASE, created_by TEXT NOT NULL REFERENCES users(user_id), expires_at TEXT NOT NULL, accepted_at TEXT, created_at TEXT NOT NULL);
+CREATE TABLE IF NOT EXISTS company_invitations (token_hash TEXT PRIMARY KEY, company_id TEXT NOT NULL REFERENCES companies(company_id), email TEXT NOT NULL COLLATE NOCASE, created_by TEXT NOT NULL REFERENCES users(user_id), expires_at TEXT NOT NULL, accepted_at TEXT, revoked_at TEXT, created_at TEXT NOT NULL);
 CREATE TABLE IF NOT EXISTS password_reset_tokens (token_hash TEXT PRIMARY KEY, user_id TEXT NOT NULL REFERENCES users(user_id), expires_at TEXT NOT NULL, created_at TEXT NOT NULL, used_at TEXT);
 CREATE TABLE IF NOT EXISTS password_reset_requests (email_hash TEXT PRIMARY KEY, requested_at TEXT NOT NULL);
 CREATE TABLE IF NOT EXISTS measurement_modules (module_id TEXT PRIMARY KEY, module_code TEXT NOT NULL UNIQUE COLLATE NOCASE, name TEXT NOT NULL, description TEXT NOT NULL, unit TEXT NOT NULL, metric_name TEXT NOT NULL, active INTEGER NOT NULL DEFAULT 1, created_at TEXT NOT NULL);
 CREATE TABLE IF NOT EXISTS measurement_module_versions (version_id TEXT PRIMARY KEY, module_id TEXT NOT NULL REFERENCES measurement_modules(module_id), version INTEGER NOT NULL, name TEXT NOT NULL, description TEXT NOT NULL, unit TEXT NOT NULL, metric_name TEXT NOT NULL, factor_value REAL, factor_unit TEXT NOT NULL, source_reference TEXT NOT NULL, status TEXT NOT NULL CHECK (status IN ('VIGENTE', 'PENDIENTE_VALIDACION_OFICIAL')), valid_from TEXT NOT NULL, created_at TEXT NOT NULL, UNIQUE (module_id, version));
-CREATE TABLE IF NOT EXISTS calculation_runs (calculation_id TEXT PRIMARY KEY, tenant_id TEXT NOT NULL, facility_id TEXT NOT NULL, facility_name TEXT NOT NULL, category TEXT NOT NULL, subcategory TEXT NOT NULL, scope TEXT NOT NULL, activity_value REAL NOT NULL, activity_unit TEXT NOT NULL, normalized_value REAL NOT NULL, normalized_unit TEXT NOT NULL, geography TEXT NOT NULL, reporting_period TEXT NOT NULL, metric_value REAL NOT NULL, metric_unit TEXT NOT NULL, co2e_total_tonnes REAL, factor_used TEXT NOT NULL, factor_value REAL, factor_unit TEXT NOT NULL, factor_status TEXT NOT NULL, source_reference TEXT NOT NULL, fallback_applied INTEGER NOT NULL, uncertainty_pct REAL NOT NULL, data_quality_score INTEGER NOT NULL, data_quality_rating TEXT NOT NULL, data_quality_tier TEXT NOT NULL, threshold_status TEXT NOT NULL, warnings_json TEXT NOT NULL, validation_json TEXT NOT NULL, breakdown_json TEXT NOT NULL, snapshot_json TEXT NOT NULL, created_at TEXT NOT NULL, created_by TEXT REFERENCES users(user_id), UNIQUE (tenant_id, facility_id, category, reporting_period, source_reference));
+CREATE TABLE IF NOT EXISTS calculation_runs (calculation_id TEXT PRIMARY KEY, tenant_id TEXT NOT NULL, facility_id TEXT NOT NULL, facility_name TEXT NOT NULL, category TEXT NOT NULL, subcategory TEXT NOT NULL, scope TEXT NOT NULL, activity_value REAL NOT NULL, activity_unit TEXT NOT NULL, normalized_value REAL NOT NULL, normalized_unit TEXT NOT NULL, geography TEXT NOT NULL, reporting_period TEXT NOT NULL, metric_value REAL NOT NULL, metric_unit TEXT NOT NULL, co2e_total_tonnes REAL, factor_used TEXT NOT NULL, factor_value REAL, factor_unit TEXT NOT NULL, factor_status TEXT NOT NULL, source_reference TEXT NOT NULL, fallback_applied INTEGER NOT NULL, uncertainty_pct REAL NOT NULL, data_quality_score INTEGER NOT NULL, data_quality_rating TEXT NOT NULL, data_quality_tier TEXT NOT NULL, threshold_status TEXT NOT NULL, warnings_json TEXT NOT NULL, validation_json TEXT NOT NULL, breakdown_json TEXT NOT NULL, snapshot_json TEXT NOT NULL, created_at TEXT NOT NULL, created_by TEXT REFERENCES users(user_id), created_by_role TEXT NOT NULL DEFAULT 'admin' CHECK (created_by_role IN ('admin', 'member')), UNIQUE (tenant_id, facility_id, category, reporting_period, source_reference));
 CREATE TABLE IF NOT EXISTS facility_headcounts (tenant_id TEXT NOT NULL, facility_id TEXT NOT NULL, facility_name TEXT NOT NULL, reporting_period TEXT NOT NULL, employee_count INTEGER NOT NULL CHECK (employee_count > 0), updated_at TEXT NOT NULL, PRIMARY KEY (tenant_id, facility_id, reporting_period));
 CREATE TABLE IF NOT EXISTS calculation_run_audit (audit_id TEXT PRIMARY KEY, calculation_id TEXT NOT NULL, tenant_id TEXT, action TEXT NOT NULL, changed_at TEXT NOT NULL, previous_record_json TEXT NOT NULL);
 DROP TRIGGER IF EXISTS calculation_runs_no_update;
@@ -91,6 +91,12 @@ if (sessionSql?.sql.includes("company_id TEXT NOT NULL")) {
 }
 const runColumns = database.prepare("PRAGMA table_info(calculation_runs)").all() as { name: string }[];
 if (!runColumns.some((column) => column.name === "created_by")) database.exec("ALTER TABLE calculation_runs ADD COLUMN created_by TEXT REFERENCES users(user_id)");
+if (!runColumns.some((column) => column.name === "created_by_role")) {
+  database.exec("ALTER TABLE calculation_runs ADD COLUMN created_by_role TEXT NOT NULL DEFAULT 'admin' CHECK (created_by_role IN ('admin', 'member'))");
+  database.exec("UPDATE calculation_runs SET created_by_role = 'member' WHERE created_by IS NOT NULL AND EXISTS (SELECT 1 FROM company_memberships WHERE company_memberships.company_id = calculation_runs.tenant_id AND company_memberships.user_id = calculation_runs.created_by AND company_memberships.role = 'member')");
+}
+const invitationColumns = database.prepare("PRAGMA table_info(company_invitations)").all() as { name: string }[];
+if (!invitationColumns.some((column) => column.name === "revoked_at")) database.exec("ALTER TABLE company_invitations ADD COLUMN revoked_at TEXT");
 const auditColumns = database.prepare("PRAGMA table_info(calculation_run_audit)").all() as { name: string }[];
 if (!auditColumns.some((column) => column.name === "tenant_id")) database.exec("ALTER TABLE calculation_run_audit ADD COLUMN tenant_id TEXT");
 
@@ -603,9 +609,76 @@ function getRecommendations(category: string, threshold: string, fallbackApplied
   return database.prepare(`SELECT rec_id AS id, domain_category AS category, probable_cause AS probableCause, opportunity, recommended_action AS action, indicative_investment AS investment, timeframe, priority, venezuela_availability AS venezuelaAvailability, payback_months AS paybackMonths FROM recommendation_engine WHERE domain_category IN (${Array.from(allowed).map(() => "?").join(", ")})`).all(...Array.from(allowed));
 }
 
-function insertCalculation(calculationId: string, input: EnvironmentalInput, computed: ReturnType<typeof compute>, createdAt: string) {
-  database.prepare(`INSERT INTO calculation_runs (calculation_id, tenant_id, facility_id, facility_name, category, subcategory, scope, activity_value, activity_unit, normalized_value, normalized_unit, geography, reporting_period, metric_value, metric_unit, co2e_total_tonnes, factor_used, factor_value, factor_unit, factor_status, source_reference, fallback_applied, uncertainty_pct, data_quality_score, data_quality_rating, data_quality_tier, threshold_status, warnings_json, validation_json, breakdown_json, snapshot_json, created_at, created_by) VALUES (${Array.from({ length: 33 }, () => "?").join(", ")})`).run(
-    calculationId, input.tenantId, input.facilityId, input.facilityName, input.category, input.subcategory, computed.scope, input.activityValue, input.activityUnit, computed.normalizedValue, computed.normalizedUnit, input.geography, input.reportingPeriod, computed.metricValue, computed.metricUnit, computed.co2eTotalTonnes, computed.factorUsed, computed.factorValue, computed.factorUnit, computed.factorStatus, computed.sourceReference, computed.fallbackApplied ? 1 : 0, computed.uncertaintyPct, computed.dataQualityScore, computed.dataQualityRating, computed.dataQualityTier, computed.thresholdStatus, JSON.stringify(computed.warnings), JSON.stringify(computed.validation), JSON.stringify(computed.breakdown), JSON.stringify(computed.snapshot), createdAt, input.createdByUserId ?? null,
+function calculationRecord(calculationId: string, input: EnvironmentalInput, computed: ReturnType<typeof compute>, createdAt: string, createdByRole: "admin" | "member") {
+  return {
+    calculation_id: calculationId,
+    tenant_id: input.tenantId,
+    facility_id: input.facilityId,
+    facility_name: input.facilityName,
+    category: input.category,
+    subcategory: input.subcategory,
+    scope: computed.scope,
+    activity_value: input.activityValue,
+    activity_unit: input.activityUnit,
+    normalized_value: computed.normalizedValue,
+    normalized_unit: computed.normalizedUnit,
+    geography: input.geography,
+    reporting_period: input.reportingPeriod,
+    metric_value: computed.metricValue,
+    metric_unit: computed.metricUnit,
+    co2e_total_tonnes: computed.co2eTotalTonnes,
+    factor_used: computed.factorUsed,
+    factor_value: computed.factorValue,
+    factor_unit: computed.factorUnit,
+    factor_status: computed.factorStatus,
+    source_reference: computed.sourceReference,
+    fallback_applied: computed.fallbackApplied,
+    uncertainty_pct: computed.uncertaintyPct,
+    data_quality_score: computed.dataQualityScore,
+    data_quality_rating: computed.dataQualityRating,
+    data_quality_tier: computed.dataQualityTier,
+    threshold_status: computed.thresholdStatus,
+    warnings_json: computed.warnings,
+    validation_json: computed.validation,
+    breakdown_json: computed.breakdown,
+    snapshot_json: computed.snapshot,
+    created_at: createdAt,
+    created_by: input.createdByUserId ?? null,
+    created_by_role: createdByRole,
+  };
+}
+
+export function prepareCalculation(input: EnvironmentalInput, createdByRole: "admin" | "member") {
+  const computed = compute(input);
+  const createdAt = new Date().toISOString();
+  const calculationId = `CALC-${createdAt.slice(0, 10).replace(/-/g, "")}-${randomUUID().slice(0, 8)}`;
+  return {
+    result: { ...computed, calculationId, createdAt, ...(input.createdByUserId ? { createdByUserId: input.createdByUserId } : {}), createdByRole } as CalculationResult,
+    run: calculationRecord(calculationId, input, computed, createdAt, createdByRole),
+  };
+}
+
+export function prepareCalculationUpdate(calculationId: string, tenantId: string, input: EnvironmentalInput, actor: { id: string; role: "admin" | "member" }) {
+  const current = database.prepare("SELECT * FROM calculation_runs WHERE calculation_id = ? AND tenant_id = ?").get(calculationId, tenantId) as Record<string, unknown> | undefined;
+  if (!current) throw Object.assign(new Error("No se encontró el registro que deseas modificar."), { statusCode: 404 });
+  if (actor.role === "member" && current.created_by !== actor.id) throw Object.assign(new Error("Solo puedes modificar tus propios registros."), { statusCode: 403 });
+  const computed = compute(input, calculationId);
+  const previousSnapshot = JSON.parse(jsonText(current.snapshot_json)) as Record<string, unknown>;
+  const previousRevision = typeof previousSnapshot.revision === "number" ? previousSnapshot.revision : 1;
+  const revised = { ...computed, snapshot: { ...computed.snapshot, revision: previousRevision + 1 } };
+  const changedAt = new Date().toISOString();
+  const createdByUserId = typeof current.created_by === "string" ? current.created_by : undefined;
+  const createdByRole = current.created_by_role === "member" ? "member" : "admin";
+  const updatedInput = { ...input, createdByUserId };
+  return {
+    result: { ...revised, calculationId, createdAt: changedAt, ...(createdByUserId ? { createdByUserId } : {}), createdByRole } as CalculationResult,
+    run: calculationRecord(calculationId, updatedInput, revised, changedAt, createdByRole),
+  };
+}
+
+function insertCalculation(calculationId: string, input: EnvironmentalInput, computed: ReturnType<typeof compute>, createdAt: string, createdByRole: "admin" | "member") {
+  database.prepare(`INSERT INTO calculation_runs (calculation_id, tenant_id, facility_id, facility_name, category, subcategory, scope, activity_value, activity_unit, normalized_value, normalized_unit, geography, reporting_period, metric_value, metric_unit, co2e_total_tonnes, factor_used, factor_value, factor_unit, factor_status, source_reference, fallback_applied, uncertainty_pct, data_quality_score, data_quality_rating, data_quality_tier, threshold_status, warnings_json, validation_json, breakdown_json, snapshot_json, created_at, created_by, created_by_role) VALUES (${Array.from({ length: 34 }, () => "?").join(", ")})`).run(
+    calculationId, input.tenantId, input.facilityId, input.facilityName, input.category, input.subcategory, computed.scope, input.activityValue, input.activityUnit, computed.normalizedValue, computed.normalizedUnit, input.geography, input.reportingPeriod, computed.metricValue, computed.metricUnit, computed.co2eTotalTonnes, computed.factorUsed, computed.factorValue, computed.factorUnit, computed.factorStatus, computed.sourceReference, computed.fallbackApplied ? 1 : 0, computed.uncertaintyPct, computed.dataQualityScore, computed.dataQualityRating, computed.dataQualityTier, computed.thresholdStatus, JSON.stringify(computed.warnings), JSON.stringify(computed.validation), JSON.stringify(computed.breakdown), JSON.stringify(computed.snapshot), createdAt, input.createdByUserId ?? null, createdByRole,
   );
 }
 
@@ -751,33 +824,75 @@ export function deleteSession(sessionToken: string) {
   database.prepare("DELETE FROM auth_sessions WHERE token_hash = ?").run(tokenDigest(sessionToken));
 }
 
+export function getCompanyMembers(companyId: string) {
+  return database.prepare("SELECT u.user_id AS id, u.email, u.first_name AS firstName, u.last_name AS lastName, u.job_title AS jobTitle, m.role, m.created_at AS joinedAt FROM company_memberships m JOIN users u ON u.user_id = m.user_id WHERE m.company_id = ? ORDER BY m.role, u.last_name COLLATE NOCASE, u.first_name COLLATE NOCASE").all(companyId) as { id: string; email: string; firstName: string; lastName: string; jobTitle: string; role: "admin" | "member"; joinedAt: string }[];
+}
+
+export function getPendingCompanyInvitations(companyId: string) {
+  return database.prepare("SELECT email, expires_at AS expiresAt FROM company_invitations WHERE company_id = ? AND accepted_at IS NULL AND revoked_at IS NULL AND expires_at > ? ORDER BY created_at DESC").all(companyId, new Date().toISOString()) as { email: string; expiresAt: string }[];
+}
+
 export function createCompanyInvitation(companyId: string, createdBy: string, email: string) {
   const normalizedEmail = email.trim().toLowerCase();
+  const existingMember = database.prepare("SELECT 1 FROM company_memberships m JOIN users u ON u.user_id = m.user_id WHERE m.company_id = ? AND u.email = ? COLLATE NOCASE").get(companyId, normalizedEmail);
+  if (existingMember) throw Object.assign(new Error("Esta persona ya tiene acceso a la empresa."), { statusCode: 409 });
+  const existingInvitation = database.prepare("SELECT 1 FROM company_invitations WHERE company_id = ? AND email = ? COLLATE NOCASE AND accepted_at IS NULL AND revoked_at IS NULL AND expires_at > ?").get(companyId, normalizedEmail, new Date().toISOString());
+  if (existingInvitation) throw Object.assign(new Error("Ya existe una invitación pendiente para este correo."), { statusCode: 409 });
   const token = newToken();
   const expiresAt = new Date(Date.now() + 1000 * 60 * 60 * 24 * 7).toISOString();
   database.prepare("INSERT INTO company_invitations (token_hash, company_id, email, created_by, expires_at, created_at) VALUES (?, ?, ?, ?, ?, ?)").run(tokenDigest(token), companyId, normalizedEmail, createdBy, expiresAt, new Date().toISOString());
   return { token, expiresAt };
 }
 
-export function getCompanyInvitation(token: string): CompanyInvitation | null {
-  const row = database.prepare("SELECT i.email, c.name AS companyName, i.expires_at AS expiresAt FROM company_invitations i JOIN companies c ON c.company_id = i.company_id WHERE i.token_hash = ? AND i.accepted_at IS NULL AND i.expires_at > ?").get(tokenDigest(token), new Date().toISOString()) as Record<string, unknown> | undefined;
-  return row ? { email: String(row.email), companyName: String(row.companyName), expiresAt: String(row.expiresAt) } : null;
+export function cancelCompanyInvitation(companyId: string, email: string) {
+  return database.prepare("UPDATE company_invitations SET revoked_at = ? WHERE company_id = ? AND email = ? COLLATE NOCASE AND accepted_at IS NULL AND revoked_at IS NULL").run(new Date().toISOString(), companyId, email.trim().toLowerCase()).changes > 0;
 }
 
-export function acceptCompanyInvitation(token: string, userId: string, email: string) {
-  const invitation = database.prepare("SELECT company_id AS companyId, email FROM company_invitations WHERE token_hash = ? AND accepted_at IS NULL AND expires_at > ?").get(tokenDigest(token), new Date().toISOString()) as { companyId: string; email: string } | undefined;
-  if (!invitation || invitation.email.toLowerCase() !== email.trim().toLowerCase()) throw Object.assign(new Error("La invitación no es válida, expiró o corresponde a otro correo."), { statusCode: 400 });
-  const now = new Date().toISOString();
+export function discardCompanyInvitation(token: string) {
+  database.prepare("DELETE FROM company_invitations WHERE token_hash = ? AND accepted_at IS NULL").run(tokenDigest(token));
+}
+
+export function revokeCompanyMember(companyId: string, userId: string, actorUserId: string) {
+  if (userId === actorUserId) throw Object.assign(new Error("No puedes revocar tu propio acceso."), { statusCode: 400 });
   database.exec("BEGIN IMMEDIATE");
   try {
-    database.prepare("INSERT INTO company_memberships (company_id, user_id, role, created_at) VALUES (?, ?, 'member', ?) ON CONFLICT (company_id, user_id) DO NOTHING").run(invitation.companyId, userId, now);
-    database.prepare("UPDATE company_invitations SET accepted_at = ? WHERE token_hash = ? AND accepted_at IS NULL").run(now, tokenDigest(token));
+    const member = database.prepare("SELECT m.role, u.email FROM company_memberships m JOIN users u ON u.user_id = m.user_id WHERE m.company_id = ? AND m.user_id = ?").get(companyId, userId) as { role: string; email: string } | undefined;
+    if (!member) throw Object.assign(new Error("No se encontró a esa persona en la empresa."), { statusCode: 404 });
+    if (member.role === "admin") {
+      const admins = database.prepare("SELECT COUNT(*) AS count FROM company_memberships WHERE company_id = ? AND role = 'admin'").get(companyId) as { count: number };
+      if (admins.count <= 1) throw Object.assign(new Error("La empresa debe conservar al menos una persona administradora."), { statusCode: 409 });
+    }
+    const now = new Date().toISOString();
+    database.prepare("DELETE FROM company_memberships WHERE company_id = ? AND user_id = ?").run(companyId, userId);
+    database.prepare("UPDATE auth_sessions SET company_id = NULL WHERE user_id = ? AND company_id = ?").run(userId, companyId);
+    database.prepare("UPDATE company_invitations SET revoked_at = ? WHERE company_id = ? AND email = ? COLLATE NOCASE AND accepted_at IS NULL AND revoked_at IS NULL").run(now, companyId, member.email);
     database.exec("COMMIT");
+    return { email: member.email };
   } catch (error) {
     database.exec("ROLLBACK");
     throw error;
   }
-  return { identity: authIdentity(userId, invitation.companyId)!, companyId: invitation.companyId };
+}
+
+export function getCompanyInvitation(token: string): CompanyInvitation | null {
+  const row = database.prepare("SELECT i.email, c.name AS companyName, i.expires_at AS expiresAt FROM company_invitations i JOIN companies c ON c.company_id = i.company_id WHERE i.token_hash = ? AND i.accepted_at IS NULL AND i.revoked_at IS NULL AND i.expires_at > ?").get(tokenDigest(token), new Date().toISOString()) as Record<string, unknown> | undefined;
+  return row ? { email: String(row.email), companyName: String(row.companyName), expiresAt: String(row.expiresAt) } : null;
+}
+
+export function acceptCompanyInvitation(token: string, userId: string, email: string) {
+  const now = new Date().toISOString();
+  database.exec("BEGIN IMMEDIATE");
+  try {
+    const invitation = database.prepare("SELECT company_id AS companyId, email FROM company_invitations WHERE token_hash = ? AND accepted_at IS NULL AND revoked_at IS NULL AND expires_at > ?").get(tokenDigest(token), now) as { companyId: string; email: string } | undefined;
+    if (!invitation || invitation.email.toLowerCase() !== email.trim().toLowerCase()) throw Object.assign(new Error("La invitación no es válida, expiró o corresponde a otro correo."), { statusCode: 400 });
+    database.prepare("INSERT INTO company_memberships (company_id, user_id, role, created_at) VALUES (?, ?, 'member', ?) ON CONFLICT (company_id, user_id) DO NOTHING").run(invitation.companyId, userId, now);
+    database.prepare("UPDATE company_invitations SET accepted_at = ? WHERE token_hash = ? AND accepted_at IS NULL AND revoked_at IS NULL").run(now, tokenDigest(token));
+    database.exec("COMMIT");
+    return { identity: authIdentity(userId, invitation.companyId)!, companyId: invitation.companyId };
+  } catch (error) {
+    database.exec("ROLLBACK");
+    throw error;
+  }
 }
 
 export function getCompanyProfile(companyId: string) {
@@ -852,6 +967,71 @@ function duplicateSourceError(error: unknown): never {
   throw error;
 }
 
+function jsonText(value: unknown): string {
+  return typeof value === "string" ? value : JSON.stringify(value);
+}
+
+let environmentCacheQueue: Promise<void> = Promise.resolve();
+
+export async function withEnvironmentCache<T>(operation: () => Promise<T>): Promise<T> {
+  const previous = environmentCacheQueue;
+  let release = () => {};
+  environmentCacheQueue = new Promise<void>((resolve) => { release = resolve; });
+  await previous;
+  try {
+    return await operation();
+  } finally {
+    release();
+  }
+}
+
+export function syncEnvironmentModules(modules: Record<string, unknown>[], versions: Record<string, unknown>[]) {
+  database.exec("BEGIN IMMEDIATE");
+  try {
+    database.exec("DELETE FROM measurement_module_versions; DELETE FROM measurement_modules;");
+    const moduleInsert = database.prepare("INSERT INTO measurement_modules (module_id, module_code, name, description, unit, metric_name, active, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
+    for (const row of modules) moduleInsert.run(...[row.module_id, row.module_code, row.name, row.description, row.unit, row.metric_name, row.active ? 1 : 0, row.created_at] as (string | number | null)[]);
+    const versionInsert = database.prepare("INSERT INTO measurement_module_versions (version_id, module_id, version, name, description, unit, metric_name, factor_value, factor_unit, source_reference, status, valid_from, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+    for (const row of versions) versionInsert.run(...[row.version_id, row.module_id, row.version, row.name, row.description, row.unit, row.metric_name, row.factor_value, row.factor_unit, row.source_reference, row.status, row.valid_from, row.created_at] as (string | number | null)[]);
+    database.exec("COMMIT");
+  } catch (error) {
+    database.exec("ROLLBACK");
+    throw error;
+  }
+}
+
+export function syncTenantEnvironmentData(tenantId: string, runs: Record<string, unknown>[], headcounts: Record<string, unknown>[], audits: Record<string, unknown>[]) {
+  const runColumns = ["calculation_id", "tenant_id", "facility_id", "facility_name", "category", "subcategory", "scope", "activity_value", "activity_unit", "normalized_value", "normalized_unit", "geography", "reporting_period", "metric_value", "metric_unit", "co2e_total_tonnes", "factor_used", "factor_value", "factor_unit", "factor_status", "source_reference", "fallback_applied", "uncertainty_pct", "data_quality_score", "data_quality_rating", "data_quality_tier", "threshold_status", "warnings_json", "validation_json", "breakdown_json", "snapshot_json", "created_at", "created_by", "created_by_role"];
+  database.exec("PRAGMA foreign_keys = OFF");
+  database.exec("BEGIN IMMEDIATE");
+  try {
+    database.exec("DROP TRIGGER IF EXISTS calculation_runs_no_update; DROP TRIGGER IF EXISTS calculation_runs_delete_requires_audit; DROP TRIGGER IF EXISTS calculation_run_audit_no_delete");
+    database.prepare("DELETE FROM calculation_runs WHERE tenant_id = ?").run(tenantId);
+    database.prepare("DELETE FROM calculation_run_audit WHERE tenant_id = ?").run(tenantId);
+    database.prepare("DELETE FROM facility_headcounts WHERE tenant_id = ?").run(tenantId);
+    const runInsert = database.prepare(`INSERT INTO calculation_runs (${runColumns.join(", ")}) VALUES (${runColumns.map(() => "?").join(", ")})`);
+    for (const row of runs) {
+      const values = runColumns.map((column) => {
+        if (column === "fallback_applied") return row[column] ? 1 : 0;
+        if (["warnings_json", "validation_json", "breakdown_json", "snapshot_json"].includes(column)) return jsonText(row[column]);
+        return row[column] ?? null;
+      }) as (string | number | null)[];
+      runInsert.run(...values);
+    }
+    const headcountInsert = database.prepare("INSERT INTO facility_headcounts (tenant_id, facility_id, facility_name, reporting_period, employee_count, updated_at) VALUES (?, ?, ?, ?, ?, ?)");
+    for (const row of headcounts) headcountInsert.run(...[row.tenant_id, row.facility_id, row.facility_name, row.reporting_period, row.employee_count, row.updated_at] as (string | number | null)[]);
+    const auditInsert = database.prepare("INSERT INTO calculation_run_audit (audit_id, calculation_id, tenant_id, action, changed_at, previous_record_json) VALUES (?, ?, ?, ?, ?, ?)");
+    for (const row of audits) auditInsert.run(...[row.audit_id, row.calculation_id, row.tenant_id, row.action, row.changed_at, jsonText(row.previous_record_json)] as (string | number | null)[]);
+    database.exec("CREATE TRIGGER calculation_runs_no_update BEFORE UPDATE ON calculation_runs BEGIN SELECT RAISE(ABORT, 'calculation runs must be recalculated'); END; CREATE TRIGGER calculation_runs_delete_requires_audit BEFORE DELETE ON calculation_runs WHEN NOT EXISTS (SELECT 1 FROM calculation_run_audit WHERE calculation_id = OLD.calculation_id AND action IN ('EDIT', 'DELETE') AND json_extract(previous_record_json, '$.created_at') = OLD.created_at) BEGIN SELECT RAISE(ABORT, 'calculation run deletion requires an audit record'); END; CREATE TRIGGER calculation_run_audit_no_delete BEFORE DELETE ON calculation_run_audit BEGIN SELECT RAISE(ABORT, 'calculation run history is immutable'); END;");
+    database.exec("COMMIT");
+  } catch (error) {
+    database.exec("ROLLBACK");
+    throw error;
+  } finally {
+    database.exec("PRAGMA foreign_keys = ON");
+  }
+}
+
 export function getFacilityHeadcount(tenantId: string, facilityId: string, reportingPeriod: string) {
   const row = database.prepare("SELECT employee_count AS employeeCount FROM facility_headcounts WHERE tenant_id = ? AND facility_id = ? AND reporting_period = ?").get(tenantId, facilityId, reportingPeriod) as { employeeCount: number } | undefined;
   return row ? asNumber(row.employeeCount) : null;
@@ -874,27 +1054,28 @@ function saveFacilityHeadcount(input: EnvironmentalInput, updatedAt: string) {
   database.prepare("INSERT INTO facility_headcounts (tenant_id, facility_id, facility_name, reporting_period, employee_count, updated_at) VALUES (?, ?, ?, ?, ?, ?) ON CONFLICT (tenant_id, facility_id, reporting_period) DO UPDATE SET facility_name = excluded.facility_name, employee_count = excluded.employee_count, updated_at = excluded.updated_at").run(input.tenantId, input.facilityId, input.facilityName, input.reportingPeriod, input.employeeCount, updatedAt);
 }
 
-export function createCalculation(input: EnvironmentalInput): CalculationResult {
+export function createCalculation(input: EnvironmentalInput, createdByRole: "admin" | "member" = "admin"): CalculationResult {
   const computed = compute(input);
   const createdAt = new Date().toISOString();
   const calculationId = `CALC-${createdAt.slice(0, 10).replace(/-/g, "")}-${randomUUID().slice(0, 8)}`;
   database.exec("BEGIN IMMEDIATE");
   try {
     saveFacilityHeadcount(input, createdAt);
-    insertCalculation(calculationId, input, computed, createdAt);
+    insertCalculation(calculationId, input, computed, createdAt, createdByRole);
     database.exec("COMMIT");
   } catch (error) {
     database.exec("ROLLBACK");
     duplicateSourceError(error);
   }
-  return { ...computed, calculationId, createdAt };
+  return { ...computed, calculationId, createdAt, ...(input.createdByUserId ? { createdByUserId: input.createdByUserId } : {}), createdByRole };
 }
 
-export function updateCalculation(calculationId: string, tenantId: string, input: EnvironmentalInput): CalculationResult {
+export function updateCalculation(calculationId: string, tenantId: string, input: EnvironmentalInput, actor: { id: string; role: "admin" | "member" }): CalculationResult {
   database.exec("BEGIN IMMEDIATE");
   try {
     const current = database.prepare("SELECT * FROM calculation_runs WHERE calculation_id = ? AND tenant_id = ?").get(calculationId, tenantId) as Record<string, unknown> | undefined;
     if (!current) throw Object.assign(new Error("No se encontró el registro que deseas modificar."), { statusCode: 404 });
+    if (actor.role === "member" && current.created_by !== actor.id) throw Object.assign(new Error("Solo puedes modificar tus propios registros."), { statusCode: 403 });
     const computed = compute(input, calculationId);
     const previousSnapshot = JSON.parse(String(current.snapshot_json)) as Record<string, unknown>;
     const previousRevision = typeof previousSnapshot.revision === "number" ? previousSnapshot.revision : 1;
@@ -903,20 +1084,23 @@ export function updateCalculation(calculationId: string, tenantId: string, input
     saveAudit(current, "EDIT", changedAt);
     saveFacilityHeadcount(input, changedAt);
     database.prepare("DELETE FROM calculation_runs WHERE calculation_id = ? AND tenant_id = ?").run(calculationId, tenantId);
-    insertCalculation(calculationId, input, revised, changedAt);
+    const updatedInput = { ...input, createdByUserId: typeof current.created_by === "string" ? current.created_by : undefined };
+    const createdByRole = current.created_by_role === "member" ? "member" : "admin";
+    insertCalculation(calculationId, updatedInput, revised, changedAt, createdByRole);
     database.exec("COMMIT");
-    return { ...revised, calculationId, createdAt: changedAt };
+    return { ...revised, calculationId, createdAt: changedAt, ...(updatedInput.createdByUserId ? { createdByUserId: updatedInput.createdByUserId } : {}), createdByRole };
   } catch (error) {
     database.exec("ROLLBACK");
     duplicateSourceError(error);
   }
 }
 
-export function deleteCalculation(calculationId: string, tenantId: string) {
+export function deleteCalculation(calculationId: string, tenantId: string, actor: { id: string; role: "admin" | "member" }) {
   database.exec("BEGIN IMMEDIATE");
   try {
     const current = database.prepare("SELECT * FROM calculation_runs WHERE calculation_id = ? AND tenant_id = ?").get(calculationId, tenantId) as Record<string, unknown> | undefined;
     if (!current) throw Object.assign(new Error("No se encontró el registro que deseas eliminar."), { statusCode: 404 });
+    if (actor.role !== "admin" || current.created_by_role === "member") throw Object.assign(new Error("Este registro no se puede eliminar; conserva su trazabilidad y su aporte a los totales empresariales."), { statusCode: 403 });
     saveAudit(current, "DELETE", new Date().toISOString());
     database.prepare("DELETE FROM calculation_runs WHERE calculation_id = ? AND tenant_id = ?").run(calculationId, tenantId);
     database.exec("COMMIT");
@@ -928,13 +1112,15 @@ export function deleteCalculation(calculationId: string, tenantId: string) {
 }
 
 export function getCalculationHistory(calculationId: string, tenantId: string) {
-  return (database.prepare("SELECT action, changed_at AS changedAt, previous_record_json AS previousRecord FROM calculation_run_audit WHERE calculation_id = ? AND tenant_id = ? ORDER BY changed_at DESC").all(calculationId, tenantId) as Record<string, unknown>[]).map((entry) => ({ action: String(entry.action), changedAt: String(entry.changedAt), previousRecord: fromRow(JSON.parse(String(entry.previousRecord)) as Record<string, unknown>) }));
+  return (database.prepare("SELECT action, changed_at AS changedAt, previous_record_json AS previousRecord FROM calculation_run_audit WHERE calculation_id = ? AND tenant_id = ? ORDER BY changed_at DESC").all(calculationId, tenantId) as Record<string, unknown>[]).map((entry) => ({ action: String(entry.action), changedAt: String(entry.changedAt), previousRecord: fromRow(JSON.parse(jsonText(entry.previousRecord)) as Record<string, unknown>) }));
 }
 
 function fromRow(row: Record<string, unknown>): CalculationResult {
-  const snapshot = JSON.parse(String(row.snapshot_json)) as Record<string, unknown>;
+  const snapshot = JSON.parse(jsonText(row.snapshot_json)) as Record<string, unknown>;
   const run: CalculationResult = {
     calculationId: String(row.calculation_id),
+    ...(typeof row.created_by === "string" ? { createdByUserId: row.created_by } : {}),
+    createdByRole: row.created_by_role === "member" ? "member" : "admin",
     category: String(row.category) as ActivityCategory,
     scope: String(row.scope),
     activityValue: asNumber(row.activity_value),
@@ -957,9 +1143,9 @@ function fromRow(row: Record<string, unknown>): CalculationResult {
     dataQualityRating: String(row.data_quality_rating),
     dataQualityTier: String(row.data_quality_tier),
     thresholdStatus: String(row.threshold_status) as CalculationResult["thresholdStatus"],
-    warnings: JSON.parse(String(row.warnings_json)) as string[],
-    validation: JSON.parse(String(row.validation_json)) as string[],
-    breakdown: JSON.parse(String(row.breakdown_json)) as Record<string, number>,
+    warnings: JSON.parse(jsonText(row.warnings_json)) as string[],
+    validation: JSON.parse(jsonText(row.validation_json)) as string[],
+    breakdown: JSON.parse(jsonText(row.breakdown_json)) as Record<string, number>,
     snapshot,
     createdAt: String(row.created_at),
   };

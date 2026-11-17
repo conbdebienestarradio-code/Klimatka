@@ -44,8 +44,8 @@ async function request(path: string, body?: unknown, method?: string, cookie = s
 
 beforeAll(async () => {
   process.env.SW_ENVIRONMENT_DATABASE_PATH = ":memory:";
-  const { createServer } = await import("./index");
-  server = createServer().listen(0);
+  const { createTestServer } = await import("./test-support/create-test-server");
+  server = (await createTestServer()).listen(0);
   const address = server.address() as AddressInfo;
   baseUrl = `http://127.0.0.1:${address.port}`;
   const registered = await request("/api/auth/register", {
@@ -71,7 +71,7 @@ afterAll(async () => {
   await new Promise<void>((resolve, reject) => server.close((error) => error ? reject(error) : resolve()));
 });
 
-describe("environmental calculation API", () => {
+describe.sequential("environmental calculation API", () => {
   it("requires a session and exposes the registered company profile", async () => {
     const anonymous = await request("/api/environment/overview", undefined, undefined, "");
     const profile = await request("/api/auth/me");
@@ -80,26 +80,26 @@ describe("environmental calculation API", () => {
     expect(profile.body).toMatchObject({ email: "admin@bienestarradio.test", role: "admin", company: { name: "Bienestar Radio", rif: "J-12345678-9", email: "contacto@bienestarradio.test", employeeCount: 25 } });
   });
 
-  it("lets an administrator invite a same-company member", async () => {
-    const invite = await request("/api/auth/invitations", { email: "analista@bienestarradio.test" });
-    expect(invite.status).toBe(201);
-    const preview = await request(`/api/auth/invitations/${invite.body.token}`, undefined, undefined, "");
-    expect(preview.body).toMatchObject({ email: "analista@bienestarradio.test", companyName: "Bienestar Radio" });
-    const registeredMember = await request("/api/auth/register", {
-      firstName: "Ana",
-      lastName: "Analista",
-      jobTitle: "Analista ambiental",
-      email: "analista@bienestarradio.test",
-      password: "SeguraClaveMiembro123",
-    }, "POST", "");
-    expect(registeredMember.status).toBe(201);
-    const memberCookie = registeredMember.setCookie?.split(";")[0] ?? "";
-    const joined = await request(`/api/auth/invitations/${invite.body.token}/accept`, undefined, "POST", memberCookie);
-    expect(joined.status).toBe(200);
-    expect(joined.body.role).toBe("member");
-    const memberInvite = await request("/api/auth/invitations", { email: "otra@bienestarradio.test" }, "POST", memberCookie);
-    expect(memberInvite.status).toBe(403);
-    expect((await request("/api/environment/overview", undefined, undefined, memberCookie)).status).toBe(200);
+
+  it("does not create invitations when email delivery is unavailable", async () => {
+    const previousApiKey = process.env.RESEND_API_KEY;
+    const previousSender = process.env.RESEND_FROM_EMAIL;
+    const previousAppUrl = process.env.KLIMATKA_APP_URL;
+    delete process.env.RESEND_API_KEY;
+    delete process.env.RESEND_FROM_EMAIL;
+    delete process.env.KLIMATKA_APP_URL;
+    try {
+      const result = await request("/api/auth/invitations", { email: "sin-correo@bienestarradio.test" });
+      expect(result.status).toBe(503);
+      expect(result.body.message).toContain("no está configurado");
+      const access = await request("/api/auth/members");
+      expect(access.body.emailConfigured).toBe(false);
+      expect(access.body.pendingInvitations).not.toContainEqual(expect.objectContaining({ email: "sin-correo@bienestarradio.test" }));
+    } finally {
+      if (previousApiKey !== undefined) process.env.RESEND_API_KEY = previousApiKey;
+      if (previousSender !== undefined) process.env.RESEND_FROM_EMAIL = previousSender;
+      if (previousAppUrl !== undefined) process.env.KLIMATKA_APP_URL = previousAppUrl;
+    }
   });
 
   it("sends a generic reset response and allows a reset token only once", async () => {
@@ -128,6 +128,7 @@ describe("environmental calculation API", () => {
       return originalFetch(input, init);
     });
     try {
+      expect((await request("/api/auth/members")).body.emailConfigured).toBe(true);
       const requested = await request("/api/auth/password-reset/request", { email: "RECUPERACION@BIENESTARRADIO.TEST" }, "POST", "");
       const unknown = await request("/api/auth/password-reset/request", { email: "ausente@bienestarradio.test" }, "POST", "");
       expect(requested.status).toBe(200);
@@ -589,5 +590,99 @@ describe("environmental calculation API", () => {
     expect(status).toBe(201);
     expect(body.thresholdStatus).toBe("CRITICO");
     expect(body.warnings.some((warning: string) => warning.includes("residuos peligrosos"))).toBe(true);
+  });
+
+  it("emails invitations, restricts worker records, and retains measurements after access revocation", async () => {
+    const previousApiKey = process.env.RESEND_API_KEY;
+    const previousSender = process.env.RESEND_FROM_EMAIL;
+    const previousAppUrl = process.env.KLIMATKA_APP_URL;
+    const originalFetch = globalThis.fetch;
+    const sentEmails: Record<string, unknown>[] = [];
+    let emailDeliveryStatus = 200;
+    process.env.RESEND_API_KEY = "re_invite_test_key";
+    process.env.RESEND_FROM_EMAIL = "Klimatka <no-reply@example.test>";
+    process.env.KLIMATKA_APP_URL = "https://klimatka.example.test";
+    vi.stubGlobal("fetch", async (input: RequestInfo | URL, init?: RequestInit) => {
+      if (String(input) === "https://api.resend.com/emails") {
+        sentEmails.push(JSON.parse(String(init?.body)) as Record<string, unknown>);
+        return new Response(JSON.stringify({ id: `invite_${sentEmails.length}` }), { status: emailDeliveryStatus, headers: { "Content-Type": "application/json" } });
+      }
+      return originalFetch(input, init);
+    });
+    try {
+      const invite = await request("/api/auth/invitations", { email: "analista@bienestarradio.test" });
+      expect(invite.status).toBe(201);
+      expect(invite.body.message).toContain("Invitación enviada");
+      expect(sentEmails[0].to).toEqual(["analista@bienestarradio.test"]);
+      const invitationUrl = String(sentEmails[0].text).split(/\r?\n/).find((line) => line.startsWith("https://klimatka.example.test/register/invitation?"));
+      if (!invitationUrl) throw new Error("Invitation URL was not included in the email.");
+      const token = new URL(invitationUrl).searchParams.get("token");
+      expect(token).toBeTruthy();
+      const preview = await request(`/api/auth/invitations/${token}`, undefined, undefined, "");
+      expect(preview.body).toMatchObject({ email: "analista@bienestarradio.test", companyName: "Bienestar Radio" });
+      const registeredMember = await request("/api/auth/register", {
+        firstName: "Ana",
+        lastName: "Analista",
+        jobTitle: "Trabajadora",
+        email: "analista@bienestarradio.test",
+        password: "SeguraClaveMiembro123",
+      }, "POST", "");
+      expect(registeredMember.status).toBe(201);
+      const memberCookie = registeredMember.setCookie?.split(";")[0] ?? "";
+      const joined = await request(`/api/auth/invitations/${token}/accept`, undefined, "POST", memberCookie);
+      expect(joined.status).toBe(200);
+      expect(joined.body.role).toBe("member");
+      expect((await request("/api/environment/overview", undefined, undefined, memberCookie)).status).toBe(200);
+      expect((await request("/api/auth/members", undefined, undefined, memberCookie)).status).toBe(403);
+      expect((await request("/api/auth/invitations", { email: "otro@bienestarradio.test" }, "POST", memberCookie)).status).toBe(403);
+
+      const adminRun = await request("/api/environment/calculate", { ...electricityInput, sourceReference: "ADMIN-OWNED-INVITE-TEST" });
+      expect((await request("/api/environment/calculate", { ...electricityInput, sourceReference: "WORKER-HEADCOUNT-INVITE-TEST", employeeCount: 30 }, "POST", memberCookie)).status).toBe(403);
+      const workerRun = await request("/api/environment/calculate", { ...electricityInput, sourceReference: "WORKER-OWNED-INVITE-TEST" }, "POST", memberCookie);
+      expect(workerRun.status).toBe(201);
+      expect(workerRun.body).toMatchObject({ createdByUserId: joined.body.id, createdByRole: "member" });
+      expect((await request(`/api/environment/runs/${adminRun.body.calculationId}`, { ...electricityInput, sourceReference: "ADMIN-OWNED-INVITE-TEST", activityValue: 20000 }, "PATCH", memberCookie)).status).toBe(403);
+      const revisedWorkerRun = await request(`/api/environment/runs/${workerRun.body.calculationId}`, { ...electricityInput, sourceReference: "WORKER-OWNED-INVITE-TEST", activityValue: 20000 }, "PATCH", memberCookie);
+      expect(revisedWorkerRun.status).toBe(200);
+      expect(revisedWorkerRun.body).toMatchObject({ createdByUserId: joined.body.id, createdByRole: "member", activityValue: 20000 });
+      expect((await request(`/api/environment/runs/${workerRun.body.calculationId}`, undefined, "DELETE", memberCookie)).status).toBe(403);
+      expect((await request(`/api/environment/runs/${workerRun.body.calculationId}`, undefined, "DELETE")).status).toBe(403);
+
+      const accessList = await request("/api/auth/members");
+      expect(accessList.body.members.some((member: Record<string, unknown>) => member.id === joined.body.id)).toBe(true);
+      const revoked = await request(`/api/auth/members/${joined.body.id}`, undefined, "DELETE");
+      expect(revoked.status).toBe(200);
+      expect(revoked.body.message).toContain("se conservaron");
+      expect((await request("/api/environment/overview", undefined, undefined, memberCookie)).status).toBe(409);
+      const companyRuns = await request(`/api/environment/runs?year=${electricityInput.reportingPeriod.slice(0, 4)}`);
+      expect(companyRuns.body.some((run: Record<string, unknown>) => run.calculationId === workerRun.body.calculationId)).toBe(true);
+      const afterRevocation = await request("/api/auth/members");
+      expect(afterRevocation.body.members.some((member: Record<string, unknown>) => member.id === joined.body.id)).toBe(false);
+
+      const cancelledInvite = await request("/api/auth/invitations", { email: "pendiente@bienestarradio.test" });
+      expect(cancelledInvite.status).toBe(201);
+      const pending = await request("/api/auth/members");
+      expect(pending.body.pendingInvitations.map((invitation: Record<string, unknown>) => invitation.email)).toContain("pendiente@bienestarradio.test");
+      expect((await request("/api/auth/invitations", { email: "pendiente@bienestarradio.test" }, "DELETE")).status).toBe(200);
+      const cancelledInvitationUrl = String(sentEmails[1].text).split(/\r?\n/).find((line) => line.startsWith("https://klimatka.example.test/register/invitation?"));
+      if (!cancelledInvitationUrl) throw new Error("Pending invitation URL was not included in the email.");
+      const cancelledToken = new URL(cancelledInvitationUrl).searchParams.get("token");
+      expect(cancelledToken).toBeTruthy();
+      expect((await request(`/api/auth/invitations/${cancelledToken}`, undefined, undefined, "")).status).toBe(404);
+
+      emailDeliveryStatus = 503;
+      const failedDelivery = await request("/api/auth/invitations", { email: "fallido@bienestarradio.test" });
+      expect(failedDelivery.status).toBe(502);
+      const afterFailedDelivery = await request("/api/auth/members");
+      expect(afterFailedDelivery.body.pendingInvitations.map((invitation: Record<string, unknown>) => invitation.email)).not.toContain("fallido@bienestarradio.test");
+    } finally {
+      vi.unstubAllGlobals();
+      if (previousApiKey === undefined) delete process.env.RESEND_API_KEY;
+      else process.env.RESEND_API_KEY = previousApiKey;
+      if (previousSender === undefined) delete process.env.RESEND_FROM_EMAIL;
+      else process.env.RESEND_FROM_EMAIL = previousSender;
+      if (previousAppUrl === undefined) delete process.env.KLIMATKA_APP_URL;
+      else process.env.KLIMATKA_APP_URL = previousAppUrl;
+    }
   });
 });

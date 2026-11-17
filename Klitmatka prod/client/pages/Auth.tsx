@@ -2,15 +2,20 @@ import { Eye, EyeOff, LoaderCircle } from "lucide-react";
 import { type FormEvent, useEffect, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import type { CompanyInvitation } from "@shared/auth";
-import klimatkaLogo from "../lib/klimatka-logo.png";
+import { appFetch, isDemoMode, setActiveCompanyId } from "../lib/demo-api";
+import { requireSupabase } from "../lib/supabase";
+import klimatkaLogoWordmark from "../lib/klimatka-logo-wordmark.png";
 
 type AuthMode = "register" | "login" | "invitation";
+const USER_MANUAL_DOWNLOAD_URL = "/manual-usuario.pdf";
 
 export default function AuthPage({ mode }: { mode: AuthMode }) {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const invitationToken = searchParams.get("token") ?? "";
-  const returnTo = searchParams.get("returnTo") ?? "/";
+  const demoMode = isDemoMode();
+  const newDemoInvite = demoMode && mode === "invitation" && searchParams.get("new") === "1";
+  const returnTo = searchParams.get("returnTo") ?? (demoMode ? "/?demo=1" : "/");
   const [invitation, setInvitation] = useState<CompanyInvitation | null>(null);
   const [invitationError, setInvitationError] = useState("");
   const [firstName, setFirstName] = useState("");
@@ -22,22 +27,25 @@ export default function AuthPage({ mode }: { mode: AuthMode }) {
   const [passwordVisible, setPasswordVisible] = useState(false);
   const [confirmVisible, setConfirmVisible] = useState(false);
   const [error, setError] = useState("");
+  const [confirmationPending, setConfirmationPending] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [checkingSession, setCheckingSession] = useState(true);
   const title = mode === "login" ? "Inicia sesión" : mode === "invitation" ? "Únete a tu empresa" : "Crea tu perfil personal";
 
   useEffect(() => {
     let active = true;
-    fetch("/api/auth/me").then(async (response) => {
+    appFetch(newDemoInvite ? "/api/auth/me?invited=1" : "/api/auth/me").then(async (response) => {
       if (!response.ok) return null;
       return await response.json() as { id: string };
     }).then(async (identity) => {
       if (!active) return;
       if (identity && mode === "invitation" && invitationToken) {
-        const accepted = await fetch(`/api/auth/invitations/${encodeURIComponent(invitationToken)}/accept`, { method: "POST" });
-        if (accepted.ok) navigate("/", { replace: true });
-        else {
-          const result = await accepted.json();
+        const accepted = await appFetch(`/api/auth/invitations/${encodeURIComponent(invitationToken)}/accept`, { method: "POST" });
+        const result = await accepted.json();
+        if (accepted.ok) {
+          if (result.company?.id) setActiveCompanyId(result.company.id);
+          navigate("/", { replace: true });
+        } else {
           setInvitationError(result.message ?? "No se pudo aceptar la invitación.");
         }
       } else if (identity && mode !== "invitation") navigate("/", { replace: true });
@@ -45,7 +53,7 @@ export default function AuthPage({ mode }: { mode: AuthMode }) {
       if (active) setCheckingSession(false);
     });
     return () => { active = false; };
-  }, [mode, navigate, invitationToken]);
+  }, [mode, navigate, invitationToken, newDemoInvite]);
 
   useEffect(() => {
     if (mode !== "invitation") return;
@@ -54,7 +62,7 @@ export default function AuthPage({ mode }: { mode: AuthMode }) {
       return;
     }
     let active = true;
-    fetch(`/api/auth/invitations/${encodeURIComponent(invitationToken)}`)
+    appFetch(`/api/auth/invitations/${encodeURIComponent(invitationToken)}`)
       .then(async (response) => {
         const data = await response.json();
         if (!response.ok) throw new Error(data.message ?? "La invitación no está disponible.");
@@ -74,26 +82,57 @@ export default function AuthPage({ mode }: { mode: AuthMode }) {
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError("");
+    setConfirmationPending(false);
     if (mode !== "login" && password !== confirmPassword) {
       setError("Las contraseñas no coinciden.");
       return;
     }
     setSubmitting(true);
     try {
-      const endpoint = mode === "login" ? "/api/auth/login" : "/api/auth/register";
-      const payload = mode === "login" ? { email, password } : { firstName, lastName, jobTitle, email, password };
-      const response = await fetch(endpoint, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
-      const result = await response.json();
-      if (!response.ok) throw new Error(result.message ?? "No fue posible completar el acceso.");
-      if (mode === "invitation") {
-        const accepted = await fetch(`/api/auth/invitations/${encodeURIComponent(invitationToken)}/accept`, { method: "POST" });
-        const acceptance = await accepted.json();
-        if (!accepted.ok) throw new Error(acceptance.message ?? "No se pudo aceptar la invitación.");
+      if (demoMode) {
+        const endpoint = mode === "login" ? "/api/auth/login" : "/api/auth/register";
+        const payload = mode === "login" ? { email, password } : { firstName, lastName, jobTitle, email, password };
+        const response = await appFetch(endpoint, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
+        const result = await response.json();
+        if (!response.ok) throw new Error(result.message ?? "No fue posible completar el acceso.");
+      } else {
+        const client = requireSupabase();
+        if (mode === "login") {
+          const { error: authError } = await client.auth.signInWithPassword({ email: email.trim(), password });
+          if (authError) throw authError;
+        } else {
+          const setupResponse = await appFetch("/api/auth/setup");
+          if (!setupResponse.ok) throw new Error("El registro aún se está configurando. Inténtalo más tarde.");
+          const setup = await setupResponse.json();
+          if (!setup.ready) throw new Error("El registro aún se está configurando. Inténtalo más tarde.");
+          const emailRedirectTo = mode === "invitation"
+            ? `${window.location.origin}/register/invitation?token=${encodeURIComponent(invitationToken)}`
+            : `${window.location.origin}/`;
+          const { data, error: authError } = await client.auth.signUp({
+            email: email.trim(),
+            password,
+            options: {
+              emailRedirectTo,
+              data: { first_name: firstName.trim(), last_name: lastName.trim(), job_title: jobTitle.trim() },
+            },
+          });
+          if (authError) throw authError;
+          if (!data.session) {
+            setConfirmationPending(true);
+            return;
+          }
+        }
       }
-      navigate(mode === "login" ? returnTo : "/", { replace: true });
+      if (mode === "invitation") {
+        const accepted = await appFetch(`/api/auth/invitations/${encodeURIComponent(invitationToken)}/accept`, { method: "POST" });
+        const identity = await accepted.json();
+        if (!accepted.ok) throw new Error(identity.message ?? "No se pudo aceptar la invitación.");
+        if (!demoMode && identity.company?.id) setActiveCompanyId(identity.company.id);
+      }
+      navigate(mode === "login" ? returnTo : demoMode ? "/?demo=1" : "/", { replace: true });
     } catch (cause) {
       const message = cause instanceof Error ? cause.message : "No fue posible completar el acceso.";
-      setError(message.includes("ya tiene una cuenta") || message.includes("ya tiene un perfil") ? "Este correo ya tiene un perfil. Inicia sesión para unirte a la empresa." : message);
+      setError(message.includes("already registered") || message.includes("ya tiene una cuenta") || message.includes("ya tiene un perfil") ? "Este correo ya tiene un perfil. Inicia sesión para unirte a la empresa." : message);
     } finally {
       setSubmitting(false);
     }
@@ -106,7 +145,7 @@ export default function AuthPage({ mode }: { mode: AuthMode }) {
   return (
     <main className="auth-page">
       <section className="auth-card" aria-labelledby="auth-title">
-        <div className="auth-brand"><img src={klimatkaLogo} alt="Klimatka, plataforma de inteligencia ambiental" /></div>
+        <div className="auth-brand auth-brand-stacked"><img src={klimatkaLogoWordmark} alt="Klimatka" /><svg className="auth-brand-caption" viewBox="0 0 330 18" role="img" aria-label="Plataforma de inteligencia ambiental"><text x="0" y="13" textLength="330" lengthAdjust="spacing">PLATAFORMA DE INTELIGENCIA AMBIENTAL</text></svg></div>
         <h1 id="auth-title">{title}</h1>
         <p className="auth-subtitle">
           {mode === "login" ? "Continúa con tu perfil de Klimatka." : mode === "invitation" ? invitation ? `Invitación para ${invitation.companyName}` : invitationError : "Tu perfil personal puede administrar varias empresas."}
@@ -129,8 +168,9 @@ export default function AuthPage({ mode }: { mode: AuthMode }) {
             <label className="auth-field"><span>Contraseña</span><span className="auth-password"><input type={passwordVisible ? "text" : "password"} autoComplete={mode === "login" ? "current-password" : "new-password"} value={password} onChange={(event) => setPassword(event.target.value)} required minLength={mode === "login" ? 1 : 12} maxLength={128} /><button type="button" onClick={() => setPasswordVisible((visible) => !visible)} aria-label={passwordVisible ? "Ocultar contraseña" : "Mostrar contraseña"}>{passwordVisible ? <EyeOff size={17} /> : <Eye size={17} />}</button></span>{mode !== "login" && <small>Mínimo 12 caracteres.</small>}</label>
             {mode !== "login" && <label className="auth-field"><span>Confirmar contraseña</span><span className="auth-password"><input type={confirmVisible ? "text" : "password"} autoComplete="new-password" value={confirmPassword} onChange={(event) => setConfirmPassword(event.target.value)} required minLength={12} maxLength={128} /><button type="button" onClick={() => setConfirmVisible((visible) => !visible)} aria-label={confirmVisible ? "Ocultar contraseña" : "Mostrar contraseña"}>{confirmVisible ? <EyeOff size={17} /> : <Eye size={17} />}</button></span></label>}
           </div>
-          {mode === "register" && <p className="auth-helper">Al crear tu perfil, iniciarás sesión automáticamente. Luego registrarás tu primera empresa para acceder al panel.</p>}
+          {mode === "register" && <p className="auth-helper">Confirma tu correo si Supabase te lo solicita; luego podrás registrar tu primera empresa.</p>}
           {error && <div className="auth-error" role="alert">{error}</div>}
+          {confirmationPending && <div className="auth-success" role="status">Revisa tu correo para confirmar la cuenta y luego inicia sesión. Si te invitó una empresa, vuelve al enlace de invitación después de confirmar.</div>}
           <button className="auth-submit" type="submit" disabled={submitting || (mode === "invitation" && !invitation)}>
             {submitting ? <LoaderCircle className="spin" size={17} /> : null}
             {submitting ? "Procesando…" : mode === "login" ? "Iniciar sesión" : mode === "invitation" ? "Crear perfil y unirme" : "Crear mi perfil"}
@@ -139,11 +179,13 @@ export default function AuthPage({ mode }: { mode: AuthMode }) {
         {mode !== "invitation" && (
           <p className="auth-switch">
             {mode === "login" ? "¿Aún no tienes perfil? " : "¿Ya tienes un perfil? "}
-            <Link to={mode === "login" ? "/register" : "/login"}>{mode === "login" ? "Crear mi perfil" : "Inicia sesión aquí"}</Link>
+            <Link to={mode === "login" ? demoMode ? "/register?demo=1" : "/register" : demoMode ? "/login?demo=1" : "/login"}>{mode === "login" ? "Crear mi perfil" : "Inicia sesión aquí"}</Link>
           </p>
         )}
-        {mode === "login" && <p className="auth-recovery-link"><Link to="/recover">¿Olvidaste tu contraseña?</Link></p>}
-        {mode === "invitation" && <p className="auth-switch">¿Ya tienes perfil? <Link to={`/login?returnTo=${encodeURIComponent(`/register/invitation?token=${invitationToken}`)}`}>Inicia sesión para aceptar la invitación</Link></p>}
+        {mode === "login" && <p className="auth-recovery-link"><Link to={demoMode ? "/recover?demo=1" : "/recover"}>¿Olvidaste tu contraseña?</Link></p>}
+        {mode === "login" && import.meta.env.DEV && <p className="auth-recovery-link"><Link to="/?demo=1">Abrir panel de demostración · datos ficticios</Link></p>}
+        {mode === "invitation" && <p className="auth-switch">¿Ya tienes perfil? <Link to={`/login?returnTo=${encodeURIComponent(`/register/invitation?token=${invitationToken}${demoMode ? "&demo=1" : ""}`)}${demoMode ? "&demo=1" : ""}`}>Inicia sesión para aceptar la invitación</Link></p>}
+        <p className="auth-recovery-link"><a href={USER_MANUAL_DOWNLOAD_URL} download="manual-usuario.pdf">Descargar manual de usuario (PDF)</a></p>
       </section>
     </main>
   );
