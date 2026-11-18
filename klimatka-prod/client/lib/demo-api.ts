@@ -163,15 +163,41 @@ function jsonResponse(value: unknown, status = 200) {
 export function isDemoMode() {
   return import.meta.env.DEV && new URLSearchParams(window.location.search).get("demo") === "1";
 }
+let pendingWriteCount = 0;
+const pendingWriteListeners = new Set<(count: number) => void>();
 
+function publishPendingWriteCount() {
+  pendingWriteListeners.forEach((listener) => listener(pendingWriteCount));
+}
+
+export function subscribeToPendingWrites(listener: (count: number) => void) {
+  pendingWriteListeners.add(listener);
+  listener(pendingWriteCount);
+  return () => {
+    pendingWriteListeners.delete(listener);
+  };
+}
 export async function appFetch(input: RequestInfo | URL, init?: RequestInit) {
   if (isDemoMode()) return demoApiFetch(input, init);
+  const method = (init?.method ?? "GET").toUpperCase();
+  const isWrite = !["GET", "HEAD", "OPTIONS"].includes(method);
   const headers = new Headers(init?.headers);
   const { data: { session } } = await supabase?.auth.getSession() ?? { data: { session: null } };
   if (session?.access_token) headers.set("Authorization", `Bearer ${session.access_token}`);
   const activeCompanyId = window.localStorage.getItem("klimatka-active-company");
   if (activeCompanyId) headers.set("x-klimatka-company-id", activeCompanyId);
-  return window.fetch(input, { ...init, headers });
+  if (isWrite) {
+    pendingWriteCount += 1;
+    publishPendingWriteCount();
+  }
+  try {
+    return await window.fetch(input, { ...init, headers });
+  } finally {
+    if (isWrite) {
+      pendingWriteCount -= 1;
+      publishPendingWriteCount();
+    }
+  }
 }
 
 export async function appLogout() {
@@ -179,7 +205,7 @@ export async function appLogout() {
     await demoApiFetch("/api/auth/logout", { method: "POST" });
     return;
   }
-  await supabase?.auth.signOut();
+  await supabase?.auth.signOut({ scope: "local" });
   window.localStorage.removeItem("klimatka-active-company");
 }
 
