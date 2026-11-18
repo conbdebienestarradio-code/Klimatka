@@ -3164,7 +3164,7 @@ function CaptureModal({
                 }}
                 className="form-control"
               >
-                {Object.entries(categoryLabels).filter(([key]) => key !== "CUSTOM" || (library?.modules?.length? 0) > 0).map(([key, label]) => (
+                {Object.entries(categoryLabels).filter(([key]) => key !== "CUSTOM" || (library?.modules?.length?? 0) > 0).map(([key, label]) => (
                   <option value={key} key={key}>
                     {label}
                   </option>
