@@ -8,11 +8,11 @@ export async function createTestServer() {
   app.get("/api/ping", (_req, res) => res.json({ message: process.env.PING_MESSAGE ?? "ping" }));
 
   const [{ authRouter }, { environmentRouter }, { platformAdminRouter }] = await Promise.all([
-    import("./legacy-auth"),
-    import("../routes/environment"),
-    import("../routes/platform-admin"),
+    import("./legacy-auth.js"),
+    import("../routes/environment.js"),
+    import("../routes/platform-admin.js"),
   ]);
-  const { requireAuthenticated, requireCompany } = await import("./legacy-auth-middleware");
+  const { requireAuthenticated, requireCompany } = await import("./legacy-auth-middleware.js");
 
   app.use("/api/auth", authRouter);
   app.use("/api/platform-admin", requireAuthenticated, platformAdminRouter);

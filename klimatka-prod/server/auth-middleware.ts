@@ -1,7 +1,7 @@
 import type { NextFunction, Request, Response } from "express";
-import type { AuthIdentity } from "../shared/auth";
+import type { AuthIdentity } from "../shared/auth.js";
 import type { SupabaseClient, User } from "@supabase/supabase-js";
-import { createSupabaseClient, getAuthIdentity } from "./supabase";
+import { createSupabaseClient, getAuthIdentity } from "./supabase.js";
 
 declare global {
   namespace Express {

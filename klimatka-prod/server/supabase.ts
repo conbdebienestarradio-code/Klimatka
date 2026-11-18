@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 import { createClient, type SupabaseClient, type User } from "@supabase/supabase-js";
-import type { AuthCompany, AuthIdentity } from "../shared/auth";
+import type { AuthCompany, AuthIdentity } from "../shared/auth.js";
 
 function getSupabaseConfig() {
   const url = process.env.SUPABASE_URL ?? process.env.VITE_SUPABASE_URL;

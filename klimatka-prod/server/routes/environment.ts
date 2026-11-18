@@ -1,9 +1,9 @@
 import { Router, type Request } from "express";
 import { z } from "zod";
-import { activityCategories, type EnvironmentalInput } from "../../shared/environment";
-import { sha256 } from "../supabase";
-import { createCalculation, deleteCalculation, prepareCalculation, prepareCalculationUpdate, syncEnvironmentModules, syncTenantEnvironmentData, updateCalculation, withEnvironmentCache, getAllRuns, getCalculationHistory, getDatabaseHealth, getFacilityHeadcount, getFacilityHeadcounts, getInputOptions, getLibrary, getOverview, getRuns } from "../environment-engine";
-import { requireAdmin } from "../auth-middleware";
+import { activityCategories, type EnvironmentalInput } from "../../shared/environment.js";
+import { sha256 } from "../supabase.js";
+import { createCalculation, deleteCalculation, prepareCalculation, prepareCalculationUpdate, syncEnvironmentModules, syncTenantEnvironmentData, updateCalculation, withEnvironmentCache, getAllRuns, getCalculationHistory, getDatabaseHealth, getFacilityHeadcount, getFacilityHeadcounts, getInputOptions, getLibrary, getOverview, getRuns } from "../environment-engine.js";
+import { requireAdmin } from "../auth-middleware.js";
 
 const qualityDimension = z.union([z.literal(0), z.literal(1), z.literal(2)]);
 const periodQuerySchema = z.object({ year: z.string().regex(/^\d{4}$/).optional(), month: z.string().regex(/^(0[1-9]|1[0-2])$/).optional() });
