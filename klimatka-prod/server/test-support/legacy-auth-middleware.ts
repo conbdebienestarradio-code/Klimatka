@@ -1,6 +1,6 @@
 import type { NextFunction, Request, Response } from "express";
-import type { AuthIdentity } from "../../shared/auth";
-import { getSessionIdentity } from "../environment-engine";
+import type { AuthIdentity } from "../../shared/auth.js";
+import { getSessionIdentity } from "../environment-engine.js";
 
 const sessionCookieName = "klimatka_session";
 

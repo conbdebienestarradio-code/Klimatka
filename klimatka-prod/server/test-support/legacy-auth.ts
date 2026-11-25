@@ -1,8 +1,8 @@
 import { Router } from "express";
 import { z } from "zod";
-import type { CompanyRegistration, UserRegistration } from "../../shared/auth";
-import { acceptCompanyInvitation, cancelCompanyInvitation, createCompanyForUser, createCompanyInvitation, createPasswordReset, deleteSession, discardCompanyInvitation, discardPasswordReset, getCompanyInvitation, getCompanyMembers, getCompanyProfile, getPendingCompanyInvitations, loginUser, registerUser, resetUserPassword, revokeCompanyMember, setSessionCompany, switchActiveCompany } from "../environment-engine";
-import { clearSessionCookie, readSessionToken, requireAdmin, requireAuthenticated, requireCompany, setSessionCookie } from "./legacy-auth-middleware";
+import type { CompanyRegistration, UserRegistration } from "../../shared/auth.js";
+import { acceptCompanyInvitation, cancelCompanyInvitation, createCompanyForUser, createCompanyInvitation, createPasswordReset, deleteSession, discardCompanyInvitation, discardPasswordReset, getCompanyInvitation, getCompanyMembers, getCompanyProfile, getPendingCompanyInvitations, loginUser, registerUser, resetUserPassword, revokeCompanyMember, setSessionCompany, switchActiveCompany } from "../environment-engine.js";
+import { clearSessionCookie, readSessionToken, requireAdmin, requireAuthenticated, requireCompany, setSessionCookie } from "./legacy-auth-middleware.js";
 
 const email = z.string().trim().email().max(254);
 const password = z.string().min(12).max(128);

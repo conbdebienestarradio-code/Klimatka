@@ -1,9 +1,9 @@
 import { randomUUID } from "node:crypto";
 import { Router, type Request, type Response } from "express";
 import { z } from "zod";
-import { createMeasurementModule, getMeasurementModuleVersions, getMeasurementModules, syncEnvironmentModules, updateMeasurementModule } from "../environment-engine";
-import { requirePlatformAdmin } from "../auth-middleware";
-import { sha256 } from "../supabase";
+import { createMeasurementModule, getMeasurementModuleVersions, getMeasurementModules, syncEnvironmentModules, updateMeasurementModule } from "../environment-engine.js";
+import { requirePlatformAdmin } from "../auth-middleware.js";
+import { sha256 } from "../supabase.js";
 
 const moduleFields = {
   name: z.string().trim().min(2).max(120),

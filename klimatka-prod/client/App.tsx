@@ -15,6 +15,7 @@ import PasswordRecovery from "./pages/PasswordRecovery";
 import Index from "./pages/Index";
 import PlatformAdminPage from "./pages/PlatformAdmin";
 import NotFound from "./pages/NotFound";
+import IdleSessionTimeout from "./components/IdleSessionTimeout";
 
 function ProtectedIndex() {
   const demoMode = isDemoMode();
@@ -58,7 +59,7 @@ const App = () => (
       <Sonner />
       <BrowserRouter>
         <Routes>
-          <Route path="/" element={<ProtectedIndex />} />
+                    <Route path="/" element={<ProtectedIndex />} />
           <Route path="/register" element={<AuthPage mode="register" />} />
           <Route path="/login" element={<AuthPage mode="login" />} />
           <Route path="/recover" element={<PasswordRecovery mode="request" />} />
@@ -67,6 +68,7 @@ const App = () => (
           <Route path="/admin" element={<PlatformAdminPage />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
+        <IdleSessionTimeout />
       </BrowserRouter>
     </TooltipProvider>
   </QueryClientProvider>

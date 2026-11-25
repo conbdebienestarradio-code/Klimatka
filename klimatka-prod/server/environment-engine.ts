@@ -2,9 +2,9 @@ import { createHash, randomBytes, randomUUID, scryptSync, timingSafeEqual } from
 import { mkdirSync } from "node:fs";
 import path from "node:path";
 import { DatabaseSync } from "node:sqlite";
-import type { AuthCompany, AuthIdentity, CompanyInvitation, CompanyRegistration, MeasurementModule, MeasurementModuleVersion, UserRegistration } from "../shared/auth";
-import type { ActivityCategory, CalculationResult, EnvironmentalInput, EnvironmentalOverview } from "../shared/environment";
-import { libraryTableCount, libraryTables } from "./environment-data";
+import type { AuthCompany, AuthIdentity, CompanyInvitation, CompanyRegistration, MeasurementModule, MeasurementModuleVersion, UserRegistration } from "../shared/auth.js";
+import type { ActivityCategory, CalculationResult, EnvironmentalInput, EnvironmentalOverview } from "../shared/environment.js";
+import { libraryTableCount, libraryTables } from "./environment-data.js";
 
 const databasePath = process.env.SW_ENVIRONMENT_DATABASE_PATH ?? (process.env.VERCEL === "1" ? ":memory:" : path.join(process.cwd(), ".data", "sw-environment-v1.sqlite"));
 mkdirSync(path.dirname(databasePath), { recursive: true });

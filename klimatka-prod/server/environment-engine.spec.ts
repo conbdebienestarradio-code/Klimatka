@@ -1,7 +1,7 @@
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import type { AddressInfo } from "node:net";
 import type { Server } from "node:http";
-import type { EnvironmentalInput } from "../shared/environment";
+import type { EnvironmentalInput } from "../shared/environment.js";
 
 let server: Server;
 let baseUrl = "";
@@ -44,7 +44,7 @@ async function request(path: string, body?: unknown, method?: string, cookie = s
 
 beforeAll(async () => {
   process.env.SW_ENVIRONMENT_DATABASE_PATH = ":memory:";
-  const { createTestServer } = await import("./test-support/create-test-server");
+  const { createTestServer } = await import("./test-support/create-test-server.js");
   server = (await createTestServer()).listen(0);
   const address = server.address() as AddressInfo;
   baseUrl = `http://127.0.0.1:${address.port}`;

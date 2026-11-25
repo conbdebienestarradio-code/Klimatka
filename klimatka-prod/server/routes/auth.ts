@@ -1,9 +1,9 @@
 import { randomBytes } from "node:crypto";
 import { Router } from "express";
 import { z } from "zod";
-import type { AuthIdentity } from "../../shared/auth";
-import { createSupabaseClient, getAuthIdentity, sha256 } from "../supabase";
-import { requireAdmin, requireAuthenticated, requireCompany } from "../auth-middleware";
+import type { AuthIdentity } from "../../shared/auth.js";
+import { createSupabaseClient, getAuthIdentity, sha256 } from "../supabase.js";
+import { requireAdmin, requireAuthenticated, requireCompany } from "../auth-middleware.js";
 
 const email = z.string().trim().email().max(254);
 const companyRegistrationSchema = z.object({
