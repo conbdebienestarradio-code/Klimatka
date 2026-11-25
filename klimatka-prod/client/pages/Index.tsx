@@ -5,6 +5,7 @@ import {
   ArrowUpRight,
   BarChart3,
   Bell,
+  Building2,
   Check,
   ChevronDown,
   ChevronLeft,
@@ -22,8 +23,10 @@ import {
   Leaf,
   Lightbulb,
   LoaderCircle,
+  LockKeyhole,
   LogOut,
   UserPlus,
+  UserRound,
   Menu,
   Plus,
   Pencil,
@@ -33,15 +36,27 @@ import {
   ShieldCheck,
   Sparkles,
   Trash2,
+  Users,
   X,
   Zap,
 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "../components/ui/dropdown-menu";
 import klimatkaLogo from "../lib/klimatka-logo.png";
 import klimatkaLogoAnimationBase from "../lib/klimatka-logo-animation-base.png";
 import CompanyAccessModal from "../components/CompanyAccessModal";
-import { appFetch, appLogout, resetDemoWorkspace } from "../lib/demo-api";
+import CollaboratorsView, { type CompanyMemberProfile } from "../components/CollaboratorsView";
+import SignOutConfirmation from "../components/SignOutConfirmation";
+import RegistrationSuccessDialog from "../components/RegistrationSuccessDialog";
+import { appFetch, resetDemoWorkspace, setActiveCompanyId } from "../lib/demo-api";
 import type { AuthIdentity, MeasurementModule } from "@shared/auth";
 import {
   activityCategories,
@@ -53,7 +68,7 @@ import {
   type QualityDimension,
 } from "@shared/environment";
 
-const USER_MANUAL_DOWNLOAD_URL = "/manual-usuario.pdf";
+const USER_MANUAL_URL = "https://drive.google.com/file/d/1Uwyi5qRNvjYb9SQCsoQSHK7VasZOEDak/view?usp=sharing";
 const WELCOME_ANIMATION_DOWNLOAD_URL = "/klimatka-intro.mp4";
 
 type Library = {
@@ -182,7 +197,7 @@ type ActivityOptions = {
   refrigerants: { code: string; name: string }[];
 };
 
-type View = "Resumen" | "Registros" | "Calidad" | "Mi actividad" | "Plan de acción";
+type View = "Resumen" | "Registros" | "Calidad" | "Mi actividad" | "Colaboradores" | "Plan de acción";
 
 type CalculationError = {
   message?: string;
@@ -448,7 +463,7 @@ function useEnvironmentalData(
   };
 }
 
-export default function Index({ identity, onManageCompanies, demoMode = false }: { identity: AuthIdentity & { company: NonNullable<AuthIdentity["company"]> }; onManageCompanies: () => void; demoMode?: boolean }) {
+export default function Index({ identity, onManageCompanies, onIdentityChange, demoMode = false }: { identity: AuthIdentity & { company: NonNullable<AuthIdentity["company"]> }; onManageCompanies: () => void; onIdentityChange: (identity: AuthIdentity) => void; demoMode?: boolean }) {
   const [introComplete, setIntroComplete] = useState(demoMode);
 
   useEffect(() => {
@@ -457,7 +472,7 @@ export default function Index({ identity, onManageCompanies, demoMode = false }:
     return () => window.clearTimeout(timeout);
   }, [demoMode]);
 
-  return introComplete ? <EnvironmentalWorkspace identity={identity} onManageCompanies={onManageCompanies} demoMode={demoMode} /> : <LaunchScreen />;
+  return introComplete ? <EnvironmentalWorkspace key={identity.company.id} identity={identity} onManageCompanies={onManageCompanies} onIdentityChange={onIdentityChange} demoMode={demoMode} /> : <LaunchScreen />;
 }
 
 function LaunchScreen() {
@@ -571,7 +586,7 @@ function LaunchScreen() {
   );
 }
 
-function EnvironmentalWorkspace({ identity, onManageCompanies, demoMode = false }: { identity: AuthIdentity & { company: NonNullable<AuthIdentity["company"]> }; onManageCompanies: () => void; demoMode?: boolean }) {
+function EnvironmentalWorkspace({ identity, onManageCompanies, onIdentityChange, demoMode = false }: { identity: AuthIdentity & { company: NonNullable<AuthIdentity["company"]> }; onManageCompanies: () => void; onIdentityChange: (identity: AuthIdentity) => void; demoMode?: boolean }) {
   const [periodMode, setPeriodMode] = useState<"ANUAL" | "MENSUAL">("ANUAL");
   const [selectedYear, setSelectedYear] = useState(monthNow.slice(0, 4));
   const [selectedMonth, setSelectedMonth] = useState(monthNow.slice(5, 7));
@@ -601,18 +616,29 @@ function EnvironmentalWorkspace({ identity, onManageCompanies, demoMode = false 
   );
   const [view, setView] = useState<View>("Resumen");
   const [captureOpen, setCaptureOpen] = useState(false);
+  const [captureMode, setCaptureMode] = useState<"corporate" | "personal">("corporate");
   const [editingRun, setEditingRun] = useState<CalculationResult | null>(null);
+  const [collaborators, setCollaborators] = useState<CompanyMemberProfile[]>([]);
+  const [collaboratorsLoading, setCollaboratorsLoading] = useState(false);
+  const [collaboratorsError, setCollaboratorsError] = useState("");
+  const [personalRuns, setPersonalRuns] = useState<CalculationResult[]>([]);
+  const [personalLoading, setPersonalLoading] = useState(false);
+  const [personalError, setPersonalError] = useState("");
   const [captureCategory, setCaptureCategory] =
     useState<ActivityCategory>("ELECTRICITY");
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [notice, setNotice] = useState("");
+  const [successConfirmation, setSuccessConfirmation] = useState<{ title: string; description: string } | null>(null);
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
   const [lastCreated, setLastCreated] = useState<CalculationResult | null>(
     null,
   );
   const [inviteOpen, setInviteOpen] = useState(false);
+  const [signOutOpen, setSignOutOpen] = useState(false);
+  const [switchingCompanyId, setSwitchingCompanyId] = useState("");
+  const [companySwitchError, setCompanySwitchError] = useState("");
   const userInitials = `${identity.firstName[0] ?? ""}${identity.lastName[0] ?? ""}`.toUpperCase();
   const companyInitials = identity.company!.name.split(/\s+/).slice(0, 2).map((part) => part[0] ?? "").join("").toUpperCase();
 
@@ -638,17 +664,27 @@ function EnvironmentalWorkspace({ identity, onManageCompanies, demoMode = false 
       : `${monthOptions[Number(selectedMonth) - 1]} ${selectedYear}`;
   const openCapture = (category: ActivityCategory = "ELECTRICITY") => {
     setEditingRun(null);
+    setCaptureMode("corporate");
     setCaptureCategory(category);
+    setCaptureOpen(true);
+  };
+  const openPersonalCapture = () => {
+    setEditingRun(null);
+    setCaptureMode("personal");
+    setCaptureCategory("ELECTRICITY");
+    setError("");
     setCaptureOpen(true);
   };
   const openEdit = (run: CalculationResult) => {
     setEditingRun(run);
+    setCaptureMode("corporate");
     setCaptureCategory(run.category);
     setError("");
     setCaptureOpen(true);
   };
 
   const submitActivity = async (input: EnvironmentalInput) => {
+    const personalCapture = !editingRun && captureMode === "personal";
     setSaving(true);
     setError("");
     setNotice("");
@@ -656,7 +692,9 @@ function EnvironmentalWorkspace({ identity, onManageCompanies, demoMode = false 
       const response = await appFetch(
         editingRun
           ? `/api/environment/runs/${encodeURIComponent(editingRun.calculationId)}`
-          : "/api/environment/calculate",
+          : personalCapture
+            ? "/api/personal-environment/calculate"
+            : "/api/environment/calculate",
         {
           method: editingRun ? "PATCH" : "POST",
           headers: { "Content-Type": "application/json" },
@@ -676,6 +714,16 @@ function EnvironmentalWorkspace({ identity, onManageCompanies, demoMode = false 
         input.employeeCount === undefined
           ? ""
           : ` Dotación registrada: ${input.employeeCount} empleados para esta sede y mes.`;
+      if (personalCapture) {
+        await loadPersonalRuns();
+        setCaptureOpen(false);
+        setEditingRun(null);
+        setSuccessConfirmation({
+          title: "Medición personal registrada satisfactoriamente",
+          description: "La medición es privada y no afecta los totales, informes ni exportaciones de la empresa.",
+        });
+        return;
+      }
       setLastCreated(calculated);
       const capturedYear = input.reportingPeriod.slice(0, 4);
       const capturedMonth = input.reportingPeriod.slice(5, 7);
@@ -695,13 +743,15 @@ function EnvironmentalWorkspace({ identity, onManageCompanies, demoMode = false 
       setCaptureOpen(false);
       if (editingRun) {
         setView("Resumen");
-        setNotice(
-          `Cálculo actualizado: ${calculatedResultText(calculated)} · ${formatPeriod(calculated.reportingPeriod)}. La versión anterior permanece en el historial del registro.${headcountNotice}`,
-        );
+        setSuccessConfirmation({
+          title: "Registro actualizado satisfactoriamente",
+          description: `La actividad se recalculó para ${formatPeriod(calculated.reportingPeriod)}. La versión anterior permanece en el historial.${headcountNotice}`,
+        });
       } else {
-        setNotice(
-          `Actividad calculada y guardada con su snapshot metodológico.${headcountNotice}`,
-        );
+        setSuccessConfirmation({
+          title: "Registro creado satisfactoriamente",
+          description: `La medición quedó incluida en los indicadores, reportes y exportaciones de la empresa.${headcountNotice}`,
+        });
       }
       setEditingRun(null);
     } catch (submissionError) {
@@ -792,26 +842,142 @@ function EnvironmentalWorkspace({ identity, onManageCompanies, demoMode = false 
     setNotice("Datos tabulares del período descargados para Power BI.");
   };
 
+  const switchCompany = async (companyId: string) => {
+    if (companyId === identity.company!.id || switchingCompanyId) return;
+    setCompanySwitchError("");
+    setSwitchingCompanyId(companyId);
+    try {
+      const response = await appFetch("/api/auth/companies/switch", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ companyId }),
+      });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.message ?? "No se pudo cambiar de empresa.");
+      setActiveCompanyId(companyId);
+      onIdentityChange(result as AuthIdentity);
+      setMobileNavOpen(false);
+    } catch (cause) {
+      setCompanySwitchError(cause instanceof Error ? cause.message : "No se pudo cambiar de empresa.");
+    } finally {
+      setSwitchingCompanyId("");
+    }
+  };
+
+  const loadPersonalRuns = useCallback(async () => {
+    setPersonalLoading(true);
+    setPersonalError("");
+    try {
+      const response = await appFetch("/api/personal-environment/runs");
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.message ?? "No se pudieron cargar tus mediciones privadas.");
+      setPersonalRuns(result as CalculationResult[]);
+    } catch (cause) {
+      setPersonalError(cause instanceof Error ? cause.message : "No se pudieron cargar tus mediciones privadas.");
+    } finally {
+      setPersonalLoading(false);
+    }
+  }, [identity.id]);
+
+  const loadCollaborators = useCallback(async () => {
+    if (identity.role !== "admin") return;
+    setCollaboratorsLoading(true);
+    setCollaboratorsError("");
+    try {
+      const response = await appFetch("/api/auth/members");
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.message ?? "No se pudieron cargar los perfiles de colaboradores.");
+      setCollaborators((result as { members: CompanyMemberProfile[] }).members.filter((member) => member.role === "member"));
+    } catch (cause) {
+      setCollaboratorsError(cause instanceof Error ? cause.message : "No se pudieron cargar los perfiles de colaboradores.");
+    } finally {
+      setCollaboratorsLoading(false);
+    }
+  }, [identity.role, identity.company!.id]);
+
+  useEffect(() => {
+    if (view !== "Colaboradores") return;
+    void loadPersonalRuns();
+    void loadCollaborators();
+  }, [view, loadPersonalRuns, loadCollaborators]);
+
   const navItems: { label: View; icon: typeof BarChart3 }[] = [
     { label: "Resumen", icon: BarChart3 },
     { label: "Registros", icon: ClipboardCheck },
     ...(identity.role === "admin"
       ? [{ label: "Calidad" as const, icon: ShieldCheck }]
       : [{ label: "Mi actividad" as const, icon: Activity }]),
+    { label: "Colaboradores", icon: Users },
     { label: "Plan de acción", icon: Lightbulb },
   ];
 
   return (
     <div className="app-shell">
       <aside className={`sidebar ${mobileNavOpen ? "sidebar-open" : ""}`}>
-        <button type="button" className="workspace-select workspace-select-button" onClick={onManageCompanies} aria-label="Cambiar o administrar empresas">
-          <span className="workspace-avatar">{companyInitials}</span>
-          <span>
-            <b>{identity.company!.name}</b>
-            <small>RIF {identity.company!.rif}</small>
-          </span>
-          <ChevronDown size={14} />
-        </button>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <button type="button" className={`workspace-select workspace-select-button ${identity.companies.length > 1 ? "workspace-select-has-companies" : ""}`} aria-label="Abrir menú de cuenta" title="Abrir menú de cuenta">
+              <span className="workspace-avatar">{companyInitials}</span>
+              <span>
+                <b>{identity.company!.name}</b>
+                <small>RIF {identity.company!.rif}</small>
+              </span>
+              <ChevronDown size={14} />
+            </button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="start" side="bottom" className="workspace-account-menu">
+            <DropdownMenuLabel className="workspace-account-profile">
+              <span className="workspace-account-avatar">{userInitials}</span>
+              <span className="workspace-account-profile-copy">
+                <b>{identity.firstName} {identity.lastName}</b>
+                <small>{identity.email}</small>
+              </span>
+            </DropdownMenuLabel>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem className="workspace-account-menu-item" onSelect={onManageCompanies}>
+              <UserRound size={15} /> Perfil y empresas
+            </DropdownMenuItem>
+            {identity.role === "admin" && (
+              <DropdownMenuItem className="workspace-account-menu-item" onSelect={() => setInviteOpen(true)}>
+                <UserPlus size={15} /> Invitar colaborador
+              </DropdownMenuItem>
+            )}
+            <DropdownMenuSeparator />
+            <DropdownMenuItem className="workspace-account-menu-item workspace-account-signout" onSelect={() => setSignOutOpen(true)}>
+              <LogOut size={15} /> Cerrar sesión
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+        {identity.companies.length > 1 && (
+          <section className="sidebar-company-switcher" aria-label="Cambiar de empresa">
+            <div className="nav-heading">TUS EMPRESAS</div>
+            <div className="sidebar-company-list">
+              {identity.companies.map((company) => {
+                const isCurrent = company.id === identity.company!.id;
+                const initials = company.name.trim().split(/\s+/).slice(0, 2).map((part) => part[0] ?? "").join("").toUpperCase() || "?";
+                return (
+                  <button
+                    type="button"
+                    className={`sidebar-company-item ${isCurrent ? "sidebar-company-current" : ""}`}
+                    key={company.id}
+                    onClick={() => void switchCompany(company.id)}
+                    disabled={isCurrent || switchingCompanyId !== ""}
+                    aria-current={isCurrent ? "page" : undefined}
+                    title={company.name}
+                  >
+                    <span className="sidebar-company-avatar">{initials}</span>
+                    <span className="sidebar-company-copy">
+                      <b>{company.name}</b>
+                      <small>{isCurrent ? "Espacio actual" : company.role === "admin" ? "Administración" : "Colaboradora"}</small>
+                    </span>
+                    {switchingCompanyId === company.id ? <LoaderCircle className="spin" size={14} /> : isCurrent ? <Check size={14} /> : <ChevronRight size={14} />}
+                  </button>
+                );
+              })}
+            </div>
+            {companySwitchError && <p className="sidebar-company-error" role="alert">{companySwitchError}</p>}
+          </section>
+        )}
         <div className="nav-heading">ESPACIO DE TRABAJO</div>
         <nav className="side-nav" aria-label="Navegación principal">
           {navItems.map(({ label, icon: Icon }) => (
@@ -845,10 +1011,6 @@ function EnvironmentalWorkspace({ identity, onManageCompanies, demoMode = false 
               <b>{identity.firstName} {identity.lastName}</b>
               <small>{identity.role === "admin" ? "Administración" : identity.jobTitle}</small>
             </span>
-            {identity.role === "admin" && <button className="icon-button sidebar-user-action" aria-label="Invitar a un usuario" onClick={() => setInviteOpen(true)}><UserPlus size={16} /></button>}
-            <button className="icon-button sidebar-user-action" aria-label="Cerrar sesión" onClick={() => { void appLogout().finally(() => window.location.assign(demoMode ? "/login?demo=1" : "/login")); }}>
-              <LogOut size={16} />
-            </button>
           </div>
         </div>
       </aside>
@@ -881,10 +1043,36 @@ function EnvironmentalWorkspace({ identity, onManageCompanies, demoMode = false 
               <Bell size={18} />
               <i />
             </button>
-            <button className="topbar-user" onClick={() => setView(identity.role === "admin" ? "Calidad" : "Mi actividad")}>
-              <span className="user-avatar">{userInitials}</span>
-              <ChevronDown size={14} />
-            </button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button type="button" className="topbar-user" aria-label="Abrir menú de cuenta" title="Abrir menú de cuenta">
+                  <span className="user-avatar">{userInitials}</span>
+                  <ChevronDown size={14} />
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" side="bottom" className="workspace-account-menu">
+                <DropdownMenuLabel className="workspace-account-profile">
+                  <span className="workspace-account-avatar">{userInitials}</span>
+                  <span className="workspace-account-profile-copy">
+                    <b>{identity.firstName} {identity.lastName}</b>
+                    <small>{identity.email}</small>
+                  </span>
+                </DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem className="workspace-account-menu-item" onSelect={onManageCompanies}>
+                  <UserRound size={15} /> Perfil y empresas
+                </DropdownMenuItem>
+                {identity.role === "admin" && (
+                  <DropdownMenuItem className="workspace-account-menu-item" onSelect={() => setInviteOpen(true)}>
+                    <UserPlus size={15} /> Invitar colaborador
+                  </DropdownMenuItem>
+                )}
+                <DropdownMenuSeparator />
+                <DropdownMenuItem className="workspace-account-menu-item workspace-account-signout" onSelect={() => setSignOutOpen(true)}>
+                  <LogOut size={15} /> Cerrar sesión
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </header>
 
@@ -914,6 +1102,7 @@ function EnvironmentalWorkspace({ identity, onManageCompanies, demoMode = false 
             <>
               {view === "Resumen" && (
                 <Dashboard
+                  downloadsAllowed={identity.email?.trim().toLowerCase() === "jeffrey.hernandez@jorgealvarado.net"}
                   overview={overview}
                   runs={periodRuns}
                   headcounts={periodHeadcounts}
@@ -952,10 +1141,17 @@ function EnvironmentalWorkspace({ identity, onManageCompanies, demoMode = false 
                   onDelete={deleteActivity}
                   canEdit={(run) => identity.role === "admin" || run.createdByUserId === identity.id}
                   canDelete={(run) => identity.role === "admin" && run.createdByRole !== "member"}
+                  creatorLabel={(run) => {
+                    if (!run.createdByUserId) return undefined;
+                    if (run.createdByUserId === identity.id) return "tú";
+                    const collaborator = (identity.company!.invitedCollaborators ?? []).find((person) => person.id === run.createdByUserId);
+                    return collaborator ? `${collaborator.firstName} ${collaborator.lastName}`.trim() : run.createdByRole === "member" ? "colaborador" : "administración";
+                  }}
                   deleting={saving}
                 />
               )}
               {view === "Calidad" && <QualityView runs={runs} />}
+              {view === "Colaboradores" && <CollaboratorsView identity={identity} companyRuns={runs} collaborators={collaborators} collaboratorsLoading={collaboratorsLoading} collaboratorsError={collaboratorsError} personalRuns={personalRuns} personalLoading={personalLoading} personalError={personalError} onInvite={() => setInviteOpen(true)} onCreateCorporate={() => openCapture()} onCreatePersonal={openPersonalCapture} onReloadPersonal={() => void loadPersonalRuns()} />}
               {view === "Plan de acción" && (
                 <ActionView runs={runs} onCreate={openCapture} />
               )}
@@ -978,11 +1174,19 @@ function EnvironmentalWorkspace({ identity, onManageCompanies, demoMode = false 
         />
       )}
       {inviteOpen && <CompanyAccessModal companyName={identity.company!.name} currentUserId={identity.id} demoMode={demoMode} onClose={() => setInviteOpen(false)} />}
+      <SignOutConfirmation open={signOutOpen} onOpenChange={setSignOutOpen} logoutHref={demoMode ? "/login?demo=1" : "/login"} />
+      <RegistrationSuccessDialog
+        open={successConfirmation !== null}
+        title={successConfirmation?.title ?? ""}
+        description={successConfirmation?.description ?? ""}
+        onOpenChange={(open) => { if (!open) setSuccessConfirmation(null); }}
+      />
       {captureOpen && (
         <CaptureModal
           key={editingRun?.calculationId ?? "new"}
           tenantId={identity.company!.id}
-          allowHeadcount={identity.role === "admin"}
+          allowHeadcount={identity.role === "admin" && captureMode === "corporate"}
+          captureMode={captureMode}
           library={activityOptions}
           initialCategory={captureCategory}
           initialRun={editingRun}
@@ -1002,6 +1206,7 @@ function EnvironmentalWorkspace({ identity, onManageCompanies, demoMode = false 
 }
 
 function Dashboard({
+  downloadsAllowed,
   overview,
   runs,
   headcounts,
@@ -1022,6 +1227,7 @@ function Dashboard({
   onExport,
   onExportPowerBi,
 }: {
+  downloadsAllowed: boolean;
   overview: EnvironmentalOverview | null;
   runs: CalculationResult[];
   headcounts: FacilityHeadcount[];
@@ -1362,20 +1568,25 @@ function Dashboard({
           <button className="button-secondary" onClick={onExportPowerBi}>
             <FileBarChart2 size={16} /> Datos para Power BI
           </button>
-          <a
-            className="button-secondary"
-            href={USER_MANUAL_DOWNLOAD_URL}
-            download
-          >
-            <Download size={16} /> Descargar manual de usuario
-          </a>
-          <a
-            className="button-secondary"
-            href={WELCOME_ANIMATION_DOWNLOAD_URL}
-            download
-          >
-            <Film size={16} /> Descargar animación MP4
-          </a>
+          {downloadsAllowed && (
+            <a
+              className="button-secondary"
+              href={USER_MANUAL_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              <Download size={16} /> Descargar manual de usuario
+            </a>
+          )}
+          {downloadsAllowed && (
+            <a
+              className="button-secondary"
+              href={WELCOME_ANIMATION_DOWNLOAD_URL}
+              download
+            >
+              <Film size={16} /> Descargar animación MP4
+            </a>
+          )}
           <button className="button-primary" onClick={() => onCreate()}>
             <Plus size={17} /> Añadir actividad
           </button>
@@ -2085,6 +2296,7 @@ function RecordsView({
   onDelete,
   canEdit,
   canDelete,
+  creatorLabel,
   deleting,
 }: {
   title: string;
@@ -2096,6 +2308,7 @@ function RecordsView({
   onDelete: (run: CalculationResult) => void;
   canEdit: (run: CalculationResult) => boolean;
   canDelete: (run: CalculationResult) => boolean;
+  creatorLabel: (run: CalculationResult) => string | undefined;
   deleting: boolean;
 }) {
   return (
@@ -2138,6 +2351,7 @@ function RecordsView({
                 onDelete={() => onDelete(run)}
                 canEdit={canEdit(run)}
                 canDelete={canDelete(run)}
+                creatorLabel={creatorLabel(run)}
                 deleting={deleting}
               />
             ))}
@@ -2165,6 +2379,7 @@ function RunRow({
   onDelete,
   canEdit,
   canDelete,
+  creatorLabel,
   deleting,
 }: {
   run: CalculationResult;
@@ -2172,6 +2387,7 @@ function RunRow({
   onDelete: () => void;
   canEdit: boolean;
   canDelete: boolean;
+  creatorLabel?: string;
   deleting: boolean;
 }) {
   const source = run.snapshot.activity as EnvironmentalInput | undefined;
@@ -2190,6 +2406,7 @@ function RunRow({
           {run.calculationId} · {formatPeriod(run.reportingPeriod)} ·{" "}
           {run.scope}
         </small>
+        {creatorLabel && <small>Registrado por {creatorLabel}</small>}
       </div>
       <div className="run-amount">
         <b>
@@ -2703,6 +2920,7 @@ function ActionView({
 function CaptureModal({
   tenantId,
   allowHeadcount,
+  captureMode,
   library,
   initialCategory,
   initialRun,
@@ -2714,6 +2932,7 @@ function CaptureModal({
 }: {
   tenantId: string;
   allowHeadcount: boolean;
+  captureMode: "corporate" | "personal";
   library: ActivityOptions | null;
   initialCategory: ActivityCategory;
   initialRun: CalculationResult | null;
@@ -3128,16 +3347,18 @@ function CaptureModal({
         <div className="modal-header">
           <div>
             <span className="modal-kicker">
-              <span className="live-dot" /> CAPTURA AMBIENTAL ·{" "}
-              {initialRun ? "CORRECCIÓN DE REGISTRO" : "NUEVA CORRIDA"}
+              {captureMode === "personal" ? <LockKeyhole size={12} /> : <Building2 size={12} />} CAPTURA AMBIENTAL ·{" "}
+              {initialRun ? "CORRECCIÓN DE REGISTRO" : captureMode === "personal" ? "MEDICIÓN PERSONAL AISLADA" : "IMPACTO CORPORATIVO"}
             </span>
             <h2 id="capture-title">
-              {initialRun ? "Modificar registro" : "Registrar actividad"}
+              {initialRun ? "Modificar registro" : captureMode === "personal" ? "Registrar impacto personal" : "Registrar actividad"}
             </h2>
             <p>
               {initialRun
                 ? "La actividad se volverá a validar y calcular; el resultado anterior permanecerá en el historial."
-                : "El motor valida la fuente y el factor antes de guardar un resultado trazable."}
+                : captureMode === "personal"
+                  ? "Esta medición será privada y quedará fuera de los totales e informes de la empresa."
+                  : "El motor valida la fuente y el factor antes de guardar un resultado trazable para la empresa."}
             </p>
           </div>
           <button
@@ -3148,6 +3369,7 @@ function CaptureModal({
             <X size={18} />
           </button>
         </div>
+        {!initialRun && <div className={`capture-scope-notice ${captureMode === "personal" ? "capture-scope-private" : "capture-scope-corporate"}`} role="note"><span>{captureMode === "personal" ? <LockKeyhole size={15} /> : <Building2 size={15} />}</span><p><b>{captureMode === "personal" ? "Medición personal aislada" : "Medición incorporada al impacto de la empresa"}</b><small>{captureMode === "personal" ? "Solo tú podrás consultarla; no se comparte con la empresa." : "Aparecerá en el reporte corporativo y quedará atribuida a tu perfil."}</small></p></div>}
         <form onSubmit={submit} className="capture-form">
           <div className="form-section-title">
             <span>01</span> Actividad y período
@@ -3164,7 +3386,7 @@ function CaptureModal({
                 }}
                 className="form-control"
               >
-                {Object.entries(categoryLabels).filter(([key]) => key !== "CUSTOM" || (library?.modules?.length?? 0) > 0).map(([key, label]) => (
+                {Object.entries(categoryLabels).filter(([key]) => key !== "CUSTOM" || (library?.modules?.length ?? 0) > 0).map(([key, label]) => (
                   <option value={key} key={key}>
                     {label}
                   </option>
@@ -3221,11 +3443,11 @@ function CaptureModal({
                 ))}
               </select>
             </InputField>
-            <InputField label="Instalación">
+            <InputField label={captureMode === "personal" ? "Lugar de la actividad" : "Instalación"}>
               <input
                 value={facilityName}
                 onChange={(event) => setFacilityName(event.target.value)}
-                placeholder="Nombre de sede o planta"
+                placeholder={captureMode === "personal" ? "Ej. Hogar o movilidad" : "Nombre de sede o planta"}
                 className="form-control"
                 required
               />
