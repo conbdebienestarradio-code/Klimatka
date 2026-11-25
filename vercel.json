@@ -1,0 +1,14 @@
+{
+  "rewrites": [
+    { "source": "/api/:path*", "destination": "/api/[...path]" },
+    { "source": "/register", "destination": "/index.html" },
+    { "source": "/login", "destination": "/index.html" },
+    { "source": "/recover", "destination": "/index.html" },
+    { "source": "/reset-password", "destination": "/index.html" },
+    { "source": "/register/invitation", "destination": "/index.html" },
+    { "source": "/admin", "destination": "/index.html" },
+    { "source": "/email-preview/confirmation", "destination": "/index.html" },
+    { "source": "/email-preview/recovery", "destination": "/index.html" },
+    { "source": "/email-preview/password-changed", "destination": "/index.html" }
+  ]
+}
