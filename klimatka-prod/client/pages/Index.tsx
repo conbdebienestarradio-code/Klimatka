@@ -855,8 +855,12 @@ function EnvironmentalWorkspace({ identity, onManageCompanies, onIdentityChange,
       const result = await response.json();
       if (!response.ok) throw new Error(result.message ?? "No se pudo cambiar de empresa.");
       setActiveCompanyId(companyId);
-      onIdentityChange(result as AuthIdentity);
-      setMobileNavOpen(false);
+      if (demoMode) {
+  onIdentityChange(result as AuthIdentity);
+  setMobileNavOpen(false);
+  return;
+}
+window.location.assign("/");
     } catch (cause) {
       setCompanySwitchError(cause instanceof Error ? cause.message : "No se pudo cambiar de empresa.");
     } finally {
