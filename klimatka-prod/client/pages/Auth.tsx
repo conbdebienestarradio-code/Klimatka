@@ -7,7 +7,34 @@ import { requireSupabase } from "../lib/supabase";
 import klimatkaLogoWordmark from "../lib/klimatka-logo-wordmark.png";
 
 type AuthMode = "register" | "login" | "invitation";
-const USER_MANUAL_DOWNLOAD_URL = "/manual-usuario.pdf";
+const USER_MANUAL_URL = "https://drive.google.com/file/d/1Uwyi5qRNvjYb9SQCsoQSHK7VasZOEDak/view?usp=sharing";
+
+function hasValidEmailDomain(email: string) {
+  const atIndex = email.lastIndexOf("@");
+  if (atIndex <= 0 || atIndex !== email.indexOf("@") || atIndex === email.length - 1) return false;
+  const domain = email.slice(atIndex + 1);
+  if (domain.length > 253 || domain.endsWith(".")) return false;
+  try {
+    const parsed = new URL(`http://${domain}`);
+    if (parsed.port || parsed.pathname !== "/" || parsed.search || parsed.hash || parsed.username || parsed.password) return false;
+    const labels = parsed.hostname.toLowerCase().split(".");
+    return labels.length > 1
+      && labels.every((label) => label.length <= 63 && /^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$/.test(label))
+      && /^(?:[a-z]{2,63}|xn--[a-z0-9-]{2,59})$/.test(labels[labels.length - 1] ?? "");
+  } catch {
+    return false;
+  }
+}
+
+function getPasswordChecks(password: string) {
+  return [
+    { label: "12 caracteres o más", met: password.length >= 12 },
+    { label: "Una letra minúscula", met: /[a-z]/.test(password) },
+    { label: "Una letra mayúscula", met: /[A-Z]/.test(password) },
+    { label: "Un número", met: /[0-9]/.test(password) },
+    { label: "Un símbolo", met: /[^A-Za-z0-9]/.test(password) },
+  ];
+}
 
 export default function AuthPage({ mode }: { mode: AuthMode }) {
   const [searchParams] = useSearchParams();
@@ -22,6 +49,7 @@ export default function AuthPage({ mode }: { mode: AuthMode }) {
   const [lastName, setLastName] = useState("");
   const [jobTitle, setJobTitle] = useState("");
   const [email, setEmail] = useState("");
+  const [emailTouched, setEmailTouched] = useState(false);
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [passwordVisible, setPasswordVisible] = useState(false);
@@ -30,6 +58,10 @@ export default function AuthPage({ mode }: { mode: AuthMode }) {
   const [confirmationPending, setConfirmationPending] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [checkingSession, setCheckingSession] = useState(true);
+  const passwordChecks = getPasswordChecks(password);
+  const passwordScore = passwordChecks.filter((check) => check.met).length;
+  const passwordStrength = passwordScore === 0 ? "empty" : passwordScore < 3 ? "weak" : passwordScore < 5 ? "medium" : "strong";
+  const passwordStrengthLabel = passwordStrength === "empty" ? "Sin evaluar" : passwordStrength === "weak" ? "Débil" : passwordStrength === "medium" ? "Intermedia" : "Fuerte";
   const title = mode === "login" ? "Inicia sesión" : mode === "invitation" ? "Únete a tu empresa" : "Crea tu perfil personal";
 
   useEffect(() => {
@@ -83,6 +115,15 @@ export default function AuthPage({ mode }: { mode: AuthMode }) {
     event.preventDefault();
     setError("");
     setConfirmationPending(false);
+    if (mode !== "login" && !hasValidEmailDomain(email.trim())) {
+      setEmailTouched(true);
+      setError("Ingresa un correo con un dominio válido, por ejemplo empresa.com.");
+      return;
+    }
+    if (mode !== "login" && passwordScore !== passwordChecks.length) {
+      setError("La contraseña debe tener 12 caracteres e incluir minúsculas, mayúsculas, números y símbolos.");
+      return;
+    }
     if (mode !== "login" && password !== confirmPassword) {
       setError("Las contraseñas no coinciden.");
       return;
@@ -91,7 +132,7 @@ export default function AuthPage({ mode }: { mode: AuthMode }) {
     try {
       if (demoMode) {
         const endpoint = mode === "login" ? "/api/auth/login" : "/api/auth/register";
-        const payload = mode === "login" ? { email, password } : { firstName, lastName, jobTitle, email, password };
+        const payload = mode === "login" ? { email: email.trim(), password } : { firstName, lastName, jobTitle, email: email.trim(), password };
         const response = await appFetch(endpoint, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
         const result = await response.json();
         if (!response.ok) throw new Error(result.message ?? "No fue posible completar el acceso.");
@@ -164,11 +205,11 @@ export default function AuthPage({ mode }: { mode: AuthMode }) {
           )}
           <div className="auth-section">
             {mode === "register" && <h2>Acceso a Klimatka</h2>}
-            <label className="auth-field"><span>Correo electrónico</span><input type="email" autoComplete="email" value={email} onChange={(event) => setEmail(event.target.value)} required maxLength={254} readOnly={mode === "invitation"} placeholder="tu@correo.com" /></label>
-            <label className="auth-field"><span>Contraseña</span><span className="auth-password"><input type={passwordVisible ? "text" : "password"} autoComplete={mode === "login" ? "current-password" : "new-password"} value={password} onChange={(event) => setPassword(event.target.value)} required minLength={mode === "login" ? 1 : 12} maxLength={128} /><button type="button" onClick={() => setPasswordVisible((visible) => !visible)} aria-label={passwordVisible ? "Ocultar contraseña" : "Mostrar contraseña"}>{passwordVisible ? <EyeOff size={17} /> : <Eye size={17} />}</button></span>{mode !== "login" && <small>Mínimo 12 caracteres.</small>}</label>
-            {mode !== "login" && <label className="auth-field"><span>Confirmar contraseña</span><span className="auth-password"><input type={confirmVisible ? "text" : "password"} autoComplete="new-password" value={confirmPassword} onChange={(event) => setConfirmPassword(event.target.value)} required minLength={12} maxLength={128} /><button type="button" onClick={() => setConfirmVisible((visible) => !visible)} aria-label={confirmVisible ? "Ocultar contraseña" : "Mostrar contraseña"}>{confirmVisible ? <EyeOff size={17} /> : <Eye size={17} />}</button></span></label>}
+            <label className="auth-field"><span>Correo electrónico</span><input type="email" autoComplete="email" value={email} onBlur={() => setEmailTouched(true)} onChange={(event) => setEmail(event.target.value)} required maxLength={254} readOnly={mode === "invitation"} placeholder="tu@correo.com" />{mode !== "login" && emailTouched && email.trim() && <small className={hasValidEmailDomain(email.trim()) ? "auth-validation-success" : "auth-validation-error"} role="status">{hasValidEmailDomain(email.trim()) ? "Formato del correo y dominio válido." : "Revisa el correo y usa un dominio como empresa.com."}</small>}</label>
+            <label className="auth-field"><span>Contraseña</span><span className="auth-password"><input type={passwordVisible ? "text" : "password"} autoComplete={mode === "login" ? "current-password" : "new-password"} value={password} onChange={(event) => setPassword(event.target.value)} required minLength={mode === "login" ? 1 : 12} maxLength={128} /><button type="button" onClick={() => setPasswordVisible((visible) => !visible)} aria-label={passwordVisible ? "Ocultar contraseña" : "Mostrar contraseña"} title={passwordVisible ? "Ocultar contraseña" : "Mostrar contraseña"}>{passwordVisible ? <EyeOff size={17} /> : <Eye size={17} />}</button></span>{mode !== "login" && <div className="auth-password-feedback" id="password-strength-guidance"><div className="password-strength" data-strength={passwordStrength} role="img" aria-label={`Fortaleza de la contraseña: ${passwordStrengthLabel}`}><span /><span /><span /><b>{passwordStrengthLabel}</b></div><ul className="password-requirements">{passwordChecks.map((check) => <li key={check.label} data-met={check.met}>{check.label}</li>)}</ul></div>}</label>
+            {mode !== "login" && <label className="auth-field"><span>Confirmar contraseña</span><span className="auth-password"><input type={confirmVisible ? "text" : "password"} autoComplete="new-password" value={confirmPassword} onChange={(event) => setConfirmPassword(event.target.value)} required minLength={12} maxLength={128} /><button type="button" onClick={() => setConfirmVisible((visible) => !visible)} aria-label={confirmVisible ? "Ocultar contraseña" : "Mostrar contraseña"} title={confirmVisible ? "Ocultar contraseña" : "Mostrar contraseña"}>{confirmVisible ? <EyeOff size={17} /> : <Eye size={17} />}</button></span></label>}
           </div>
-          {mode === "register" && <p className="auth-helper">Confirma tu correo si Supabase te lo solicita; luego podrás registrar tu primera empresa.</p>}
+          {mode === "register" && <p className="auth-helper">Confirma tu correo si Supabase te lo solicita; luego podrás registrar tu primera empresa. <Link to="/email-preview/confirmation">Ver correo de confirmación</Link></p>}
           {error && <div className="auth-error" role="alert">{error}</div>}
           {confirmationPending && <div className="auth-success" role="status">Revisa tu correo para confirmar la cuenta y luego inicia sesión. Si te invitó una empresa, vuelve al enlace de invitación después de confirmar.</div>}
           <button className="auth-submit" type="submit" disabled={submitting || (mode === "invitation" && !invitation)}>
@@ -183,9 +224,8 @@ export default function AuthPage({ mode }: { mode: AuthMode }) {
           </p>
         )}
         {mode === "login" && <p className="auth-recovery-link"><Link to={demoMode ? "/recover?demo=1" : "/recover"}>¿Olvidaste tu contraseña?</Link></p>}
-        {mode === "login" && import.meta.env.DEV && <p className="auth-recovery-link"><Link to="/?demo=1">Abrir panel de demostración · datos ficticios</Link></p>}
         {mode === "invitation" && <p className="auth-switch">¿Ya tienes perfil? <Link to={`/login?returnTo=${encodeURIComponent(`/register/invitation?token=${invitationToken}${demoMode ? "&demo=1" : ""}`)}${demoMode ? "&demo=1" : ""}`}>Inicia sesión para aceptar la invitación</Link></p>}
-        <p className="auth-recovery-link"><a href={USER_MANUAL_DOWNLOAD_URL} download="manual-usuario.pdf">Descargar manual de usuario (PDF)</a></p>
+        <p className="auth-recovery-link"><a href={USER_MANUAL_URL} target="_blank" rel="noopener noreferrer">Descargar manual de usuario (PDF)</a></p>
       </section>
     </main>
   );
