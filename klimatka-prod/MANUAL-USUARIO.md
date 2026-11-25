@@ -1,7 +1,7 @@
 ﻿# Manual de usuario de Klimatka
 
 **Guía para el uso de la plataforma de inteligencia ambiental empresarial**  
-**Edición:** 1.2 · **Alcance:** funciones disponibles en la aplicación actual
+**Edición:** 1.4 · **Alcance:** funciones disponibles en la aplicación actual
 
 ## Índice
 
@@ -31,8 +31,9 @@ Los resultados deben interpretarse junto con la actividad registrada, su fuente,
 
 1. En la pantalla de acceso, selecciona **Crear mi perfil**.
 2. Completa nombre, apellidos, cargo profesional, correo electrónico, contraseña y confirmación.
-3. La contraseña debe tener entre 12 y 128 caracteres.
-4. Selecciona **Crear mi perfil**. Después podrás crear tu primera empresa o aceptar la invitación que recibiste por correo.
+3. El correo debe tener formato y un dominio válidos. Esta comprobación revisa el formato; no confirma que el buzón exista.
+4. La contraseña debe tener entre 12 y 128 caracteres e incluir una minúscula, una mayúscula, un número y un símbolo. El indicador visual muestra la fortaleza y los requisitos pendientes.
+5. Selecciona **Crear mi perfil**. Después podrás crear tu primera empresa o aceptar la invitación que recibiste por correo.
 
 El perfil personal puede estar asociado a varias empresas. Usa un correo al que tengas acceso, especialmente para las invitaciones y la recuperación de contraseña.
 
@@ -66,20 +67,31 @@ Cada empresa tiene sus propios miembros y registros. El nombre y el RIF deben se
 
 La función está disponible para administradores de empresa. La invitación se envía al correo indicado; no hace falta copiar ni compartir un enlace desde la pantalla de administración.
 
-1. En el menú lateral, selecciona **Invitar a un usuario** para abrir **Personas y accesos**.
+1. Abre el menú de cuenta desde la flecha junto al avatar y selecciona **Invitar colaborador**. También puedes entrar en **Colaboradores** y usar ese botón.
 2. Ingresa el correo de la persona y selecciona **Enviar invitación por correo**. La invitación pendiente vence en 7 días.
 3. La persona abre el mensaje y crea su perfil o inicia sesión con ese mismo correo para aceptar la invitación.
-4. En **Personas y accesos**, la administración puede consultar quién tiene acceso, revisar invitaciones pendientes, cancelar una invitación pendiente o revocar el acceso de un miembro.
+4. La administración puede revisar accesos activos e invitaciones pendientes en **Personas y accesos**. Desde allí puede cancelar una invitación pendiente o revocar el acceso de un miembro.
 
 Si aparece el aviso **El envío de correos aún no está configurado**, la invitación no se ha enviado. El equipo que administra el despliegue de Klimatka debe configurar el servicio de correo. En la demostración local se muestra **Aún no se envían correos** y la invitación se simula; no se envía un mensaje real.
 
 Una vez aceptada, la membresía no vence: se mantiene hasta que una persona administradora revoque el acceso. El trabajador puede registrar actividades y corregir las propias desde **Mi actividad**; también puede consultar los datos de la empresa y ver los demás registros en modo de solo lectura. No puede modificar registros de otras personas, cambiar la dotación de las sedes ni eliminar sus capturas.
 
-Las actividades de los trabajadores se incluyen en los totales empresariales. Al revocar el acceso se bloquea su entrada a la empresa, pero sus registros, versiones e historial de auditoría se conservan; no se borran ni se restan de los indicadores.
+Las actividades corporativas de los trabajadores se incluyen en los totales empresariales. Al revocar el acceso se bloquea su entrada a la empresa, pero sus registros, versiones e historial de auditoría se conservan; no se borran ni se restan de los indicadores.
+
+### Colaboradores y mediciones individuales
+
+Abre **Colaboradores** en el menú lateral. Todas las personas pueden consultar su propio perfil. La administración también ve los perfiles de quienes aceptaron la invitación, su cargo, correo, fecha de acceso y aporte corporativo; las mediciones personales privadas de otra persona no se muestran.
+
+Cada perfil distingue dos tipos de medición:
+
+- **Impacto corporativo:** selecciona **Registrar impacto corporativo**. La captura queda atribuida a quien la realizó y se integra en los indicadores, reportes y exportaciones de la empresa.
+- **Impacto personal aislado:** selecciona **Registrar impacto personal aislado**. La medición se guarda por separado, solo su titular puede consultarla y no afecta los totales, reportes ni exportaciones empresariales. Su historial aparece en **Mediciones personales aisladas** dentro de **Colaboradores**.
+
+En el formulario personal se indica el lugar de la actividad y no se registra la dotación de empleados. Antes de guardar, comprueba el aviso que identifica si la captura es corporativa o personal.
 
 ### Cambiar de empresa o cerrar sesión
 
-Selecciona el nombre de la empresa en la parte superior izquierda para volver a **Tus empresas** y cambiar el espacio activo. Para salir de la cuenta, utiliza **Cerrar sesión** junto a tu nombre en el menú lateral.
+Si tu perfil tiene varias empresas, puedes cambiar de espacio desde la lista **Tus empresas** en la barra lateral. La flecha junto al avatar abre el menú de cuenta: **Perfil y empresas** vuelve a la administración de espacios y **Cerrar sesión** muestra una confirmación. Selecciona **Seguir aquí** para cancelar o **Sí, cerrar sesión** para salir. La opción **Invitar colaborador** aparece para administración.
 
 ## 4. Navegar por la herramienta
 
@@ -90,8 +102,9 @@ El menú lateral contiene las vistas principales:
 - **Mi actividad:** vista personal de las capturas del trabajador; desde aquí puede registrar actividades y corregir las propias, pero no eliminarlas.
 - **Calidad:** consulta el promedio del Índice DQ y sus cinco dimensiones. Las cuentas administradoras la ven en el menú; el botón **Conoce el método** también abre esta vista.
 - **Plan de acción:** ruta de mejora de referencia y oportunidades generadas a partir de los registros.
+- **Colaboradores:** perfiles del equipo para administración y perfil propio para cada integrante; separa los aportes corporativos de las mediciones personales privadas.
 
-En pantallas pequeñas, utiliza el botón de menú para abrir o cerrar la navegación. El selector superior izquierdo cambia de empresa. El botón de notificaciones informa si hay avisos nuevos; si indica que no hay notificaciones, no es necesario realizar ninguna acción.
+En pantallas pequeñas, utiliza el botón de menú para abrir o cerrar la navegación. La lista **Tus empresas** cambia el espacio activo. La flecha junto al avatar abre las opciones de cuenta y salida. El botón de notificaciones informa si hay avisos nuevos; si indica que no hay notificaciones, no es necesario realizar ninguna acción.
 
 La administración de módulos y parámetros metodológicos está reservada a cuentas autorizadas por Klimatka; no forma parte de las tareas de administración ordinaria de una empresa.
 
@@ -144,7 +157,7 @@ En los módulos de IA e internet, ingresa energía, agua o GEI informados solo c
 
 ## 7. Revisar, corregir o eliminar registros
 
-Abre **Registros** para consultar las actividades guardadas. El campo de búsqueda permite localizar registros por categoría, período o factor. Cada fila muestra el módulo, la instalación, el período, la actividad, el resultado, el Índice DQ y el estado del cálculo.
+Abre **Registros** para consultar las actividades guardadas. El campo de búsqueda permite localizar registros por categoría, período o factor. Cada fila muestra el módulo, la instalación, el período, la actividad, el resultado, el Índice DQ y el estado del cálculo. Cuando hay una persona identificada, aparece la etiqueta **Registrado por** con su nombre o rol.
 
 - **Ver trazabilidad:** despliega el detalle del factor utilizado, su estado y fuente, la fuente de actividad, las puntuaciones de calidad, incertidumbre y advertencias metodológicas. En actividades digitales también aparecen los datos de proveedor y uso que se hayan informado.
 - **Modificar:** selecciona **Modificar**, corrige los datos y guarda. Klimatka vuelve a validar y calcular la actividad; la versión anterior permanece en **Historial de versiones**. Un trabajador puede modificar sus propios registros; la administración puede corregir registros de la empresa.
@@ -194,6 +207,7 @@ La creación y actualización de módulos de medición está restringida a cuent
 - **Aparece una advertencia metodológica o un factor pendiente:** consulta **Ver trazabilidad** y conserva la advertencia al interpretar el resultado.
 - **No puedes iniciar sesión:** comprueba que uses el correo del perfil. Si no recuerdas la contraseña, utiliza **¿Olvidaste tu contraseña?**.
 - **No llega el enlace de recuperación:** revisa el correo no deseado. Si la pantalla informa que la recuperación no está disponible, contacta al equipo administrador.
+- **El enlace de recuperación venció o no es válido:** selecciona **Solicitar un nuevo enlace** y vuelve a iniciar la solicitud con el correo de tu perfil.
 - **No puedes aceptar una invitación:** verifica que el enlace del correo no haya vencido y que estés usando el mismo correo al que se envió. Solicita una invitación nueva si es necesario.
 - **El envío de correos aún no está configurado:** la invitación no se ha enviado. Contacta al equipo que administra el despliegue de Klimatka para habilitar el servicio de correo. En la demostración local las invitaciones son simuladas.
 - **No puedes invitar a otra persona o administrar la empresa:** confirma que tu perfil tenga el rol de administradora en esa empresa.
@@ -202,12 +216,54 @@ La creación y actualización de módulos de medición está restringida a cuent
 
 ## Glosario
 
-- **GEI:** gases de efecto invernadero.
-- **CO₂e:** unidad equivalente de dióxido de carbono usada para expresar el impacto de gases de efecto invernadero.
-- **tCO₂e / kgCO₂e:** toneladas o kilogramos de CO₂ equivalente.
-- **Índice DQ:** índice de calidad del dato calculado a partir de cinco dimensiones de evidencia.
-- **Factor de emisión:** valor usado junto con una actividad para calcular un resultado ambiental.
-- **Regla de respaldo:** alternativa metodológica aplicada cuando corresponde; su uso debe revisarse en la trazabilidad.
+- **Actividad reportada:** cantidad de consumo, uso o emisión que se ingresa en Klimatka, como kWh de electricidad, litros de combustible o kg de residuos.
+- **Balance de agua:** comparación entre el agua consumida, descargada y reutilizada que se haya informado. Una diferencia señala agua no contabilizada; por sí sola no demuestra que exista una fuga.
+- **CAMX:** código de una región eléctrica de Estados Unidos que puede seleccionarse para aplicar el factor de red correspondiente.
+- **CH₄:** fórmula química del metano, un gas de efecto invernadero.
+- **CO₂:** dióxido de carbono.
+- **CO₂e (dióxido de carbono equivalente):** unidad que permite expresar el efecto de distintos gases de efecto invernadero en una escala común equivalente a CO₂.
+- **Contenido reciclado:** proporción de material reciclado usada para fabricar un producto o empaque. No significa que ese producto haya sido recuperado o reciclado después de su uso.
+- **CSV (valores separados por comas):** formato de archivo de texto que organiza información en filas y columnas. Se puede abrir con una hoja de cálculo e importar en herramientas de análisis de datos.
+- **Denominador productivo:** cantidad de producto o actividad que se usa como base para calcular una intensidad, por ejemplo, agua utilizada por unidad producida.
+- **Dotación:** cantidad de empleados informada para una sede y un período; se utiliza para calcular indicadores por empleado.
+- **DQ (Data Quality o calidad del dato):** sigla en inglés utilizada para hablar de la calidad y el respaldo de la información registrada.
+- **Factor contractual:** factor de emisión informado por un proveedor o incluido en un acuerdo de suministro de energía, con su fuente documental.
+- **Factor de emisión:** valor que se combina con una actividad —por ejemplo, kWh o litros— para calcular emisiones.
+- **Factor pendiente de validación:** factor disponible en Klimatka cuya fuente o valor requiere confirmación; al compartir el resultado debe conservarse esta advertencia.
+- **Fuente de actividad:** factura, medición, registro operativo u otra referencia que respalda la cantidad registrada.
+- **GB (gigabyte):** unidad utilizada para medir el volumen de información digital, como el tráfico de internet.
+- **GEI:** gases de efecto invernadero, que retienen calor en la atmósfera y contribuyen al cambio climático.
+- **GHG Protocol:** estándar internacional usado por organizaciones para contabilizar y reportar sus emisiones de gases de efecto invernadero. GHG corresponde a “greenhouse gases”, gases de efecto invernadero en inglés.
+- **Historial de versiones y auditoría:** registro de las correcciones realizadas y de las versiones anteriores de una actividad, que permite revisar sus cambios.
+- **IA:** inteligencia artificial. El módulo de Klimatka registra actividad de servicios de IA; las solicitudes y los tokens no equivalen por sí solos a emisiones.
+- **Impacto corporativo:** medición guardada en el espacio de una empresa, atribuida a quien la registró e incluida en sus indicadores, informes y exportaciones.
+- **Impacto personal aislado:** medición privada que se guarda por separado. Solo la persona que la registra puede consultarla; no se incluye en los totales, informes ni exportaciones de una empresa.
+- **Incertidumbre:** margen de variación posible de un resultado, relacionado con la precisión de los datos y factores disponibles.
+- **Índice DQ:** puntuación de 0 a 10 que resume cinco aspectos del dato: fuente, medición, representatividad temporal, representatividad operacional y trazabilidad. Un puntaje alto significa mejor respaldo, no necesariamente menor impacto.
+- **Intensidad por empleado:** resultado ambiental dividido entre la cantidad de empleados informada para la sede y el período; ayuda a comparar valores entre equipos de distinto tamaño.
+- **IPCC AR6:** Sexto Informe de Evaluación del Panel Intergubernamental sobre Cambio Climático, utilizado como referencia metodológica para algunos factores.
+- **kgCO₂e / tCO₂e:** kilogramos o toneladas de dióxido de carbono equivalente. Una tonelada equivale a 1.000 kilogramos.
+- **Location-based (basado en la ubicación):** método que usa el factor promedio de la red eléctrica de la región donde se consume la electricidad.
+- **Market-based (basado en el mercado):** método que usa un factor contractual o específico del proveedor de electricidad cuando existe documentación de respaldo.
+- **Masa recuperada:** cantidad de material efectivamente recuperado según los datos registrados; no se deduce solo porque un material sea reciclable.
+- **Material elegible para circularidad:** cantidad de material que se toma como base para ciertos indicadores de recuperación o reincorporación; debe estar respaldada por datos.
+- **Medición directa:** dato obtenido mediante un instrumento o procedimiento de medición, en lugar de una estimación.
+- **N₂O:** fórmula química del óxido nitroso, un gas de efecto invernadero.
+- **PDF (formato de documento portátil):** archivo que conserva la presentación de un informe para leerlo, compartirlo o imprimirlo.
+- **Power BI:** herramienta de Microsoft para analizar y visualizar datos; Klimatka permite exportar registros empresariales en CSV para usarlos allí.
+- **Registro operativo:** dato anotado durante las operaciones habituales de una organización, como un control de consumo.
+- **Representatividad operacional:** cuánto abarcan los datos las sedes, procesos o actividades que se quieren describir.
+- **Representatividad temporal:** cuánto coincide el período cubierto por la fuente con el período del informe.
+- **RIF:** Registro de Información Fiscal; número de identificación tributaria de una empresa en Venezuela.
+- **Regla de respaldo:** alternativa metodológica usada cuando no está disponible el dato o factor preferido. Debe revisarse en la trazabilidad y no confundirse con una medición directa.
+- **Scope / alcance 1, 2 y 3:** categorías para ordenar emisiones. El alcance 1 comprende emisiones directas de fuentes controladas por la organización; el 2, principalmente emisiones asociadas a la energía comprada; el 3, otras emisiones indirectas de la cadena de valor.
+- **Estimación:** valor aproximado utilizado cuando no se dispone de una medición directa; debe identificarse como estimado y respaldarse con la información disponible.
+- **Token:** unidad de texto que un sistema de IA procesa al recibir una solicitud o generar una respuesta. El número de tokens registra uso, no emisiones por sí solo.
+- **Trazabilidad:** posibilidad de seguir un resultado hasta los datos, documentos, factores y decisiones usados para calcularlo.
+- **Tier 1, Tier 2 y Tier 3:** etiquetas del nivel del dato que Klimatka muestra junto con el Índice DQ. Deben interpretarse junto con la puntuación, la fuente y las advertencias del registro.
+- **VOC, NOx, SOx y PM10:** abreviaturas de contaminantes del aire: compuestos orgánicos volátiles, óxidos de nitrógeno, óxidos de azufre y partículas de hasta 10 micrómetros, respectivamente.
+- **VE / CO:** códigos geográficos que identifican Venezuela y Colombia en las opciones de captura de Klimatka.
+- **Refrigerante:** sustancia usada en equipos de refrigeración o climatización; algunas pueden producir emisiones si se liberan.
 
 ---
 
